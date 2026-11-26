@@ -1,0 +1,97 @@
+<style>
+/* CYP EAT wears the CYP design system: tokens.css and ds/bundle.css are its files, unchanged, and come first.
+   Here: only how the pieces sit on the screens of this app. Colours, type, spaces, radii and movement are variables of the design system.
+   Fonts, stylesheets and icons are inside the app, so it opens without internet. */
+html,body{height:100%}
+body{background:var(--surface-soft);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button,label.cyp-btn{cursor:pointer}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+#app{min-height:100%;display:flex;flex-direction:column}
+
+/* ---------- bar at the top with what belongs to it (pages on a computer, chapters, the banner without internet) ---------- */
+.hdr{position:sticky;top:0;z-index:10}
+.cyp-appbar__sync{white-space:nowrap}
+.cyp-tabbar a{-webkit-tap-highlight-color:transparent}
+main{flex:1 1 auto;display:grid;gap:var(--space-4);align-content:start;padding:var(--space-4)}
+main>*,.cyp-card>*,.cyp-sheet__body>*,.ovsec>*{min-width:0}
+.cyp-chitenge{flex:none}
+
+/* ---------- how the pieces are placed ---------- */
+.rowform{flex:1;min-width:0;display:grid;gap:var(--space-3)}
+.cyp-row .cyp-btn{flex:none;padding:0 var(--space-3)}
+.two,.three,.four,.inl,.ovsec{display:grid;gap:var(--space-2)}
+.two{grid-template-columns:repeat(2,minmax(0,1fr))} .three{grid-template-columns:repeat(3,minmax(0,1fr))} .four{grid-template-columns:repeat(4,minmax(0,1fr))} .inl{grid-template-columns:minmax(0,1fr) auto}
+.ovsec{gap:var(--space-4)}
+.two .cyp-btn,.three .cyp-btn,.four .cyp-btn,.wrap .cyp-btn{padding:0 var(--space-2)}
+.wrap{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.band{display:flex;align-items:center;gap:var(--space-4)}
+.start{justify-self:start} .center{text-align:center} .muted{color:var(--ink-muted)} .num{font-variant-numeric:tabular-nums}
+textarea.cyp-input{min-height:calc(var(--touch-min) * 2);padding:var(--space-2) var(--space-3)}
+.qrow+.qrow{border-top:1px solid var(--line);padding-top:var(--space-3)}
+.cam{min-height:calc(var(--touch-min) * 2)}
+.photo{width:100%;max-height:calc(var(--space-16) * 5);object-fit:contain;background:var(--surface);border:1px solid var(--line)}
+.cyp-donut h3{margin:0 0 var(--space-4)}
+/* the cover of the overview, on the blue ground */
+.cover{display:grid;gap:var(--space-4);justify-items:start;padding:var(--space-8) var(--space-6)}
+.cover .period{color:var(--yellow)}
+/* on a phone a sheet fits the part of the screen the keyboard leaves free (comment of 20/11) */
+@media (max-width:899.98px){.cyp-sheet-layer{top:var(--vvt,0px);bottom:auto;height:var(--vvh,100%)}}
+
+/* ---------- the first screens: the seal of the project under the wordmark, the PIN ---------- */
+.plogo{display:flex;align-items:center;justify-content:center;gap:var(--space-2);color:var(--ink-muted)} .plogo img{height:var(--space-12);width:auto}
+.keys .cyp-btn{min-height:var(--space-16);font:inherit}
+.dots{display:flex;justify-content:center;gap:var(--space-3);padding:var(--space-2) 0}
+.dots i{width:var(--space-4);height:var(--space-4);border-radius:var(--radius-control);border:2px solid var(--blue)} .dots i.f{background:var(--blue)}
+
+/* ---------- the calendar (exception of CYP EAT): seven columns, the chosen day as a chosen option ---------- */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-1);text-align:center}
+.cyp-choice__row.cal{grid-auto-flow:row}
+.cal span{padding:0;flex-direction:column;gap:0}
+.cal input:checked+span::before{content:none}
+.cal .tod span{border-color:var(--ok)}
+.sd{display:inline-block;width:var(--space-2);height:var(--space-2);border-radius:var(--radius-disc);background:currentColor;vertical-align:middle} .sd.done{background:var(--ok)}
+
+/* ---------- the count of the plates (exception of CYP EAT): the big button, tapped once for each plate ---------- */
+.tapbox{display:grid;justify-items:center;padding:var(--space-4) 0 var(--space-2)}
+.tap{--edge:var(--navy);width:calc(var(--disc-lg) * 4);height:calc(var(--disc-lg) * 4);border-radius:var(--radius-disc);border:0;background:var(--blue);color:var(--on-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-1);box-shadow:0 var(--space-2) 0 var(--edge);touch-action:manipulation;-webkit-user-select:none;user-select:none;position:relative;-webkit-tap-highlight-color:transparent;outline:none}
+.tap:active{transform:translateY(var(--space-1));box-shadow:0 var(--space-1) 0 var(--edge)}
+/* missing, counting, finished, marked as not counted */
+.tap.s-none{background:var(--danger)} .tap.s-count{background:var(--blue)} .tap.s-done{background:var(--ok)} .tap.s-skip{background:var(--ink-muted)}
+.tap:focus-visible{box-shadow:0 var(--space-2) 0 var(--edge),0 0 0 var(--space-1) var(--surface),0 0 0 var(--space-2) var(--focus)}
+.tap .big{font:var(--type-chapter-number) var(--font-display)}
+/* each tap answers with a ring that opens and fades: opacity and size only */
+.tap::after{content:"";position:absolute;inset:0;border-radius:var(--radius-disc);border:var(--space-1) solid var(--blue-sky);opacity:0;pointer-events:none}
+@keyframes tapring{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(1.2)}}
+@media (prefers-reduced-motion:no-preference){.tap.hit::after{animation:tapring var(--motion-page) var(--ease-enter)}}
+.pst{display:grid;justify-items:center;gap:var(--space-1);text-align:center}
+/* beta 1.7: the portions remained after lunch at Minsundu, and the dinner of the menu of the week in the middle */
+.dinsplit { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-3) 0; }
+.dinsplit .cyp-stat { padding: var(--space-3); text-align: center; }
+.dinsplit .cyp-stat.din { border: 2px solid var(--blue); background: var(--blue-wash, var(--surface)); }
+.dinsplit .cyp-stat__figure { font-size: 2rem; line-height: 1.1; }
+/* beta 1.7: two buttons in the bar (Comment, Change access): on a phone the state of the data is its icon, the word stays for screen readers */
+@media (max-width: 520px) { .cyp-appbar__sync .synct { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+/* beta 1.8: the photo of the note above the form stays small, the form is the work */
+img.photo.rdimg { max-height: 180px; width: auto; max-width: 100%; display: block; margin: 0 auto var(--space-2); object-fit: contain; }
+/* beta 1.11: the overview on one page. The days of a canteen as seven squares: done, part, nothing, nobody there, today, to come */
+.dgrid { display: inline-flex; gap: 3px; vertical-align: middle; }
+.dg { display: inline-block; width: 22px; height: 22px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--line); font: 600 12px/20px var(--font-text); text-align: center; font-style: normal; color: var(--ink-muted); }
+.dg--done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.dg--part { background: var(--yellow); border-color: var(--yellow); color: var(--navy); }
+.dg--none { background: var(--danger); border-color: var(--danger); color: #fff; }
+.dg--absent, .dg--skip { background: var(--ink-muted); border-color: var(--ink-muted); color: #fff; }
+.dg--today { border: 2px solid var(--blue); color: var(--blue); }
+p .dg { width: 12px; height: 12px; vertical-align: -1px; font-size: 0; }
+.ovname { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; }
+.ovc { text-decoration: none; color: inherit; gap: var(--space-3); }
+.ovc__head { display: flex; align-items: center; gap: var(--space-2); }
+.ovc__head .ovname { flex: 1; }
+.ovck { margin: var(--space-1) 0 0; padding-left: 1.1em; }
+.ovck li { margin: 2px 0; }
+.ovck--0 { color: var(--danger); font-weight: 600; }
+.ovck--3 { color: var(--ink-muted); }
+.cyp-tiles.ovtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+.cyp-tiles.ovtiles .cyp-stat { margin: 0; }
+</style>

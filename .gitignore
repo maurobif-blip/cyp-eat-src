@@ -1,0 +1,6 @@
+site/
+src/index.html
+__pycache__/
+*.bak*
+local/
+*.pyc
