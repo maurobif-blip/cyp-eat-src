@@ -582,12 +582,66 @@ assert.ok(r.results[0].again);
   assert.ok(ent('dmenu', 'NKW', '2026-11-26', '', { meals: { Lunch: { mm: true, relish: ['fsh', 'egg'] } } }).ok);
   const a = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-26');
   assert.deepEqual(a.days.map(x => x.st), ['none', 'none', 'none', 'done', 'future', 'future', 'future']);
-  assert.deepEqual([a.past, a.done, a.none, a.eaten, a.verdict], [4, 1, 3, 60, 'warn']);
+  assert.deepEqual([a.past, a.done, a.none, a.eaten, a.verdict], [4, 1, 3, 60, 'part']);   // beta 1.12: days not written are a gap, in grey, not a warning
   assert.equal(Math.round(a.food.fsh.per * 1000), 100);
   // a fridge count short of the expected: food missing, in portions too
   assert.ok(ent('endweek', 'NKW', '2026-11-22', '', { q: { fsh: 10, egg: 2 }, nc: {} }).ok);
   assert.ok(ent('endweek', 'NKW', '2026-11-26', '', { q: { fsh: 4 }, nc: { egg: true } }).ok);
   const b = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-26');
-  assert.deepEqual(b.missing, [{ id: 'fsh', n: 2, unit: 'kg', about: false, portions: 20 }]); assert.equal(b.verdict, 'danger'); assert.equal(b.fridge, '2026-11-26');
+  assert.deepEqual(b.missing, [{ id: 'fsh', n: 2, unit: 'kg', about: false, portions: 20 }]); assert.equal(b.fridge, '2026-11-26');
+  // beta 1.12 (Mauro, 26/11: "there is always the warning"): food short with days without a daily count is to check, not missing
+  assert.equal(b.sure, false); assert.equal(b.verdict, 'warn'); assert.equal(b.food.fsh.big, true);
+}
+// beta 1.12: the verdict of the overview. Nothing written: none. Every day counted and the fridge short above the margin: food missing.
+// A small difference (no scale) is not a finding. Portions not accounted count above 5% of the portions cooked.
+{
+  db = C.eatNewDb(); now = '2026-11-25T10:00:00Z'; C.eatUpgrade(db); db.centres.find(c => c.id === 'NKW').left = true;
+  assert.equal(C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-25').verdict, 'none');
+  assert.ok(ent('endweek', 'NKW', '2026-11-22', '', { q: { fsh: 20 }, nc: {} }).ok);
+  ['2026-11-23', '2026-11-24', '2026-11-25'].forEach(d => {
+    now = d + 'T10:00:00Z';
+    assert.ok(ent('dmenu', 'NKW', d, '', { meals: { Lunch: { mm: true, relish: ['fsh'] } } }).ok);
+    assert.ok(ent('people', 'NKW', d, 'Lunch', { n: 50, done: true }).ok);
+    assert.ok(ent('staff', 'NKW', d, '', { n: 0 }).ok);
+    assert.ok(ent('dbefore', 'NKW', d, '', { q: { fsh: 5 }, nc: {}, u: {}, pc: 51 }).ok);
+    assert.ok(ent('dafter', 'NKW', d, '', { pr: 0 }).ok);
+  });
+  // 20 kg at the start, 15 cooked: 5 expected. 4.5 counted: 0.5 short of 20 is inside the margin; 1 portion a day not accounted of 51 too
+  assert.ok(ent('endweek', 'NKW', '2026-11-25', '', { q: { fsh: 4.5 }, nc: {} }).ok);
+  let v = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-25');
+  assert.deepEqual([v.done, v.past, v.sure, v.missing.length, v.small, v.unacc, v.unaccBig, v.verdict], [3, 3, true, 0, 1, 3, false, 'ok']);
+  // 2 counted: 3 kg short of 20, every day counted: food missing
+  assert.ok(ent('endweek', 'NKW', '2026-11-25', '', { q: { fsh: 2 }, nc: {} }).ok);
+  v = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-25');
+  assert.deepEqual([v.missing.length, v.missing[0].n, v.small, v.verdict], [1, 3, 0, 'danger']);
+  // counted "about": the margin is 20%, 3 of 20 is inside
+  assert.ok(ent('endweek', 'NKW', '2026-11-25', '', { q: { fsh: 2 }, nc: {}, ab: { fsh: true } }).ok);
+  v = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-25'); assert.deepEqual([v.missing.length, v.small, v.verdict], [0, 1, 'ok']);
+  // 10 portions of 51 cooked and not accounted on one day: to check
+  now = '2026-11-25T11:00:00Z'; assert.ok(ent('dbefore', 'NKW', '2026-11-25', '', { q: { fsh: 5 }, nc: {}, u: {}, pc: 60 }).ok);
+  v = C.eatAccount(db, 'NKW', '2026-11-23', '2026-11-25'); assert.deepEqual([v.unacc, v.unaccBig, v.days[2].unaccBig, v.days[0].unaccBig, v.verdict], [12, true, true, false, 'warn']);
+}
+// beta 1.12 (Letizia, 26/11: "the option to encode each meal quantity in portions: ex: 10 nshima, 6 fish, 30 pork"): the portions remained of each food
+{
+  db = C.eatNewDb(); now = '2026-11-26T10:00:00Z'; C.eatUpgrade(db); db.centres.find(c => c.id === 'NKW').left = true;
+  assert.ok(ent('people', 'NKW', '2026-11-26', 'Lunch', { n: 90, done: true }).ok);
+  assert.ok(ent('dbefore', 'NKW', '2026-11-26', '', { q: { mm: 20, fsh: 12 }, nc: {}, u: { mm: 'use' } }).ok);
+  assert.ok(ent('dafter', 'NKW', '2026-11-26', '', { pr: 10, prf: { mm: 10, fsh: 30, zzz: 4, egg: -1 } }).ok);
+  assert.deepEqual(C.eatGet(db, 'dafter', 'NKW', '2026-11-26', '').data.prf, { mm: 10, fsh: 30 });
+  let u = C.eatDayUse(db, 'NKW', '2026-11-26');
+  // nshima: 10 of 100 portions left, 2 of 20 kg; fish: 30 of 120 portions left, 3 of 12 kg; a portion of fish = 9 kg / 90
+  assert.deepEqual([u.remained, u.leftPortions, u.base, u.left.mm, u.used.mm, u.left.fsh, u.used.fsh], [10, 10, 90, 2, 18, 3, 9]);
+  assert.deepEqual(u.remF, { mm: 10, fsh: 30 }); assert.equal(C.eatPerPlate(u, 'fsh'), 0.1); assert.equal(C.eatPerPlate(u, 'mm'), 0.2);
+  // without the detail: every food left in the same share
+  assert.ok(ent('dafter', 'NKW', '2026-11-26', '', { pr: 10 }).ok);
+  u = C.eatDayUse(db, 'NKW', '2026-11-26'); assert.deepEqual([u.left.mm, u.left.fsh, u.remF], [2, 1.2, undefined]);
+  // Minsundu: the dinner of the menu eats the portions remained of each food first
+  db.centres.find(c => c.id === 'MIN').left = true;
+  assert.ok(ent('people', 'MIN', '2026-11-26', 'Lunch', { n: 100, done: true }).ok);
+  assert.ok(ent('dbefore', 'MIN', '2026-11-26', '', { q: { mm: 34, prk: 17 }, nc: {}, u: { mm: 'use' } }).ok);
+  const dinner = C.eatFixed(db, 'MIN', 'Dinner');
+  assert.ok(ent('dafter', 'MIN', '2026-11-26', '', { pr: dinner + 10, prf: { mm: dinner + 10, prk: dinner - 20 } }).ok);
+  u = C.eatDayUse(db, 'MIN', '2026-11-26');
+  assert.deepEqual([u.leftPortions, u.leftF.mm, u.leftF.prk, u.left.prk, C.eatBaseOf(u, 'prk'), C.eatBaseOf(u, 'mm')], [10, 10, 0, 0, 100 + dinner - 20, 100 + dinner]);
 }
 console.log('core tests: all passed');

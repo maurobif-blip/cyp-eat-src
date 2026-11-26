@@ -159,7 +159,7 @@ function checkSummary(db, c) {
 }
 /* the store of one centre in the week shown: start + delivered − cooked = expected, next to the count at the end of the week */
 function checkCard(db, c, wide) {
-  var w = eatWeekCheck(db, c, S.week, todayStr()), rows = '', trs = [], miss = 0;
+  var w = eatWeekCheck(db, c, S.week, todayStr()), rows = '', trs = [], miss = 0, sure = w.daysFood >= w.days;
   db.items.forEach(function (it) {
     var x = w.items[it.id]; if (!x || (!x.start && !x.inn && !x.used && !x.counted)) return;
     var pill = '', why = '';
@@ -168,8 +168,10 @@ function checkCard(db, c, wide) {
     else if (x.counted === null) pill = tag('', 'Not counted');
     else if (x.diff == null) pill = tag('', 'Counted: ' + esc(qtyUnit(x.counted, it.unit)));
     else if (x.diff === 0) pill = tag('ok', 'As expected');
-    else if (x.diff < 0) { pill = tag('danger', esc(qtyUnit(-x.diff, it.unit)) + ' missing'); miss++; }
-    else pill = tag('warn', esc(qtyUnit(x.diff, it.unit)) + ' more');
+    /* beta 1.12: in colour only above the margin; "missing" only when every day has its daily count */
+    else if (x.diff < 0 && !eatShortBig(x)) pill = tag('', esc(qtyUnit(-x.diff, it.unit)) + ' less');
+    else if (x.diff < 0) { pill = tag(sure ? 'danger' : 'warn', esc(qtyUnit(-x.diff, it.unit)) + (sure ? ' missing' : ' short')); miss++; }
+    else pill = tag('', esc(qtyUnit(x.diff, it.unit)) + ' more');
     if (x.expected == null) why = x.start == null ? 'there is no count before this week' : (it.unit !== it.use && !it.per ? 'set how much is in one ' + unitOne(it.unit) + ' (Settings, Food and units)' : 'a daily count is not complete');
     var sum = 'Start ' + (x.start == null ? '?' : fmt(x.start)) + ' + delivered ' + fmt(x.inn) + ' − cooked ' + fmt(x.used) + ' = expected <strong>' + (x.expected == null ? '?' : fmt(x.expected)) + '</strong>' + (x.counted === undefined ? '' : (x.counted === null ? ' · not counted at the end' : ' · counted <strong>' + fmt(x.counted) + '</strong>'));
     rows += row('', esc(it.name) + ' (' + esc(it.unit) + ')', sum + (why ? ' · Expected not known: ' + why + '.' : ''), '', pill);
@@ -177,7 +179,7 @@ function checkCard(db, c, wide) {
   });
   var head = small((w.startCounted ? 'Start: counted ' + dayName(w.startDate) : (w.startDate ? 'Start: the stock on Monday morning, from the count of ' + dayName(w.startDate) : 'Start: no count before this week')) + '. ' +
     (w.endDate ? 'End: counted ' + dayName(w.endDate) : 'End: not counted yet') + '. Daily food counted on ' + w.daysFood + ' of ' + plural(w.days, 'day', 'days') + (w.daysSkipped ? ' (' + w.daysSkipped + ' marked not counted)' : '') + '.');
-  var warn = miss && w.daysFood < w.days ? '<div class="cyp-note cyp-note--warn"><b>Check the days without a daily count first</b><p>Food cooked on a day without a daily count is not in "cooked", so it shows as missing. Check those days first.</p></div>' : '';
+  var warn = miss && w.daysFood < w.days ? '<div class="cyp-note cyp-note--warn"><b>Check the days without a daily count first</b><p>Food cooked on a day without a daily count is not in "cooked", so it shows as short. Check those days first.</p></div>' : '';
   return '<div class="cyp-card cyp-card--stack" data-check="' + c + '">' + h3(esc(centreName(c))) + head +
     (rows ? (wide ? table([['Item'], ['Unit'], ['Start', 1], ['Delivered', 1], ['Cooked', 1], ['Expected', 1], ['Counted', 1], ['Difference', 1]], trs, null, { dense: true }) : list(rows)) : '<p class="muted">Nothing yet.</p>') + warn + '</div>';
 }

@@ -199,31 +199,31 @@ with sync_playwright() as pw:
     p.locator('nav [data-to="week"]').click(); p.wait_for_timeout(200)
     t = body(p); assert '1. Menu of the week' in t and 'To do' in t, t[:600]
     p.locator('a.steprow[data-to="plan"]').click(); p.wait_for_timeout(200)
-    t = body(p); assert 'Plan of the week' in t and 'Take a picture of the plan' in t and p.locator('#plc').count() == 0 and p.locator('[data-plday]').count() == 7 and p.inner_text('main .bk') == 'Weekly', t[:600]
+    t = body(p); assert 'Menu of the week' in t and 'Take a picture of the menu of the week' in t and p.locator('#plc').count() == 0 and p.locator('[data-plday]').count() == 7 and p.inner_text('main .bk') == 'Weekly', t[:600]
     p.set_input_files('#cam', JPG); p.wait_for_timeout(1500)
     t = body(p); assert 'Read from the photo' in t and p.locator('[data-plday]').count() == 7, t[:800]
     assert [p.input_value(x) for x in ['#pl0pLunch', '#pl0pDinner', '#pl0qegg', '#pl1on0', '#pl1ov0', '#pl3pDinner', '#pl0f']] == ['120', '40', '7', 'Ukubalula', '1', '60', 'Eggs']
     assert p.locator('#plplaces option[value="Ukubalula"]').count() == 1 and p.locator('#plplaces option[value="Chinika House"]').count() == 1
     p.fill('#pl2pLunch', '100'); p.fill('#pl2pDinner', '40'); pick(p, '#pl2add', 'egg'); p.wait_for_timeout(200); p.fill('#pl2qegg', '6')
     shot(p, '26_plan_form')
-    tapt(p, 'Save the plan'); p.wait_for_timeout(1200)
-    t = body(p); assert 'Saved: the plan of Minsundu, week of 16/11/2026' in t, t[:500]
+    tapt(p, 'Save the menu of the week'); p.wait_for_timeout(1200)
+    t = body(p); assert 'Saved: the menu of Minsundu, week of 16/11/2026' in t, t[:500]
     db = json.loads(urllib.request.urlopen(B + '/__dump').read())
     pl = [e for e in db['entries'] if e['type'] == 'plan' and not e.get('del')]
     assert len(pl) == 1 and pl[0]['centre'] == 'MIN' and pl[0]['date'] == '2026-11-16' and pl[0]['byName'] == 'Anna Test' and pl[0]['data']['photo'] == 'photo_plan_minsundu_1', pl
     assert pl[0]['data']['days']['2'] == {'p': {'Lunch': 100, 'Dinner': 40}, 'o': {}, 'q': {'egg': 6}, 'food': ''} and pl[0]['data']['days']['1']['o'] == {'Ukubalula': 1}, pl[0]['data']['days']
     # opened again: the saved plan is in the form
-    tapt(p, 'Write or correct a plan'); p.wait_for_timeout(200)
-    assert 'The plan of this week is saved' in body(p) and p.input_value('#pl2qegg') == '6'
+    tapt(p, 'Write or correct a menu of the week'); p.wait_for_timeout(200)
+    assert 'The menu of this week is saved' in body(p) and p.input_value('#pl2qegg') == '6'
     # beta 1.4 (comments of Mauro, 24/11): next week starts from this plan; the quantities follow the people; shares of the other places; something different
     p.locator('[data-a="plWeek"][value="2026-11-23"]').click(); p.wait_for_timeout(300)
-    t = body(p); assert 'Filled in from the plan of the week of 16/11/2026' in t and p.input_value('#pl0qegg') == '7' and p.input_value('#pl0f') == 'Eggs', t[:900]
+    t = body(p); assert 'Filled in from the menu of the week of 16/11/2026' in t and p.input_value('#pl0qegg') == '7' and p.input_value('#pl0f') == 'Eggs', t[:900]
     assert 'For Ukubalula (1 of 161 people): 0.14 chickens of chicken' in p.inner_text('#plsh1'), p.inner_text('#plsh1')
     p.fill('#pl0pLunch', '60'); p.wait_for_timeout(200); assert p.input_value('#pl0qegg') == '4.5'   # 7 trays for 160 people -> 100 people
     p.fill('#pl1qchk', '20'); p.fill('#pl1pLunch', '60'); p.wait_for_timeout(200); assert p.input_value('#pl1qchk') == '20'   # written by hand: it stays
     p.locator('[data-a="plDiff"][data-w="0"]').click(); p.wait_for_timeout(200); p.fill('#pl0xw0', 'Children'); p.fill('#pl0xf0', 'Fish from Sunday')
     shot(p, '26b_plan_next_week')
-    tapt(p, 'Save the plan'); p.wait_for_timeout(1000); assert 'Saved: the plan of Minsundu, week of 23/11/2026' in body(p)
+    tapt(p, 'Save the menu of the week'); p.wait_for_timeout(1000); assert 'Saved: the menu of Minsundu, week of 23/11/2026' in body(p)
     db = json.loads(urllib.request.urlopen(B + '/__dump').read())
     p2 = [e for e in db['entries'] if e['type'] == 'plan' and e['date'] == '2026-11-23' and not e.get('del')][0]['data']['days']
     assert p2['0']['q'] == {'egg': 4.5} and p2['0']['p'] == {'Lunch': 60, 'Dinner': 40} and p2['0']['x'] == [{'who': 'Children', 'food': 'Fish from Sunday'}] and p2['1']['q'] == {'chk': 20}, p2
@@ -237,10 +237,10 @@ with sync_playwright() as pw:
     t = body(p); assert 'Which day' not in t and 'Not counted' in t and 'Choose the day' in t and p.locator('.tap.s-none').count() == 1, t[:400]
     t = body(p); assert 'Tap: +1' in t and '+10' in t and 'Other' in t and 'Daily' in t and 'Weekly' in t, t[:600]; shot(p, '04_people')
     assert p.locator('[data-a="meal"]').count() == 0 and 'Lunch · Minsundu' in body(p) and 'Breakfast' not in body(p)  # one meal to count: nothing to choose
-    t = body(p); assert 'Dinner' in t and '60 portions in the plan of the week · not counted · change it in the plan' in t and 'For Ukubalula' in t and '10 portions in the plan of the week · cooked here, not counted' in t, t[:900]
+    t = body(p); assert 'Dinner' in t and '60 portions in the menu of the week · not counted · change it in the menu of the week' in t and 'For Ukubalula' in t and '10 portions in the menu of the week · cooked here, not counted' in t, t[:900]
     # comment of Mauro (24/11): the dinners planned and the other places change from the people page, in the plan of the week
     p.locator('[data-a="planGo"]', has_text='Other places cooked for here').click(); p.wait_for_timeout(200)
-    t = body(p); assert 'Plan of the week' in t and p.inner_text('main .bk') == 'People' and p.input_value('#pl3pDinner') == '60' and p.locator('#plplaces option[value="Chinika House"]').count() == 1, t[:600]
+    t = body(p); assert 'Menu of the week' in t and p.inner_text('main .bk') == 'People' and p.input_value('#pl3pDinner') == '60' and p.locator('#plplaces option[value="Chinika House"]').count() == 1, t[:600]
     p.locator('main .bk').click(); p.wait_for_timeout(200); assert 'All meals' in body(p)
     for i in range(5): p.locator('.tap').click()
     tapt(p, 'Undo the last one'); assert p.inner_text('#cnt') == '4'
@@ -326,7 +326,7 @@ with sync_playwright() as pw:
     p.locator('[data-to="menu"]').click(); p.wait_for_timeout(100)
     t = body(p); assert 'Breakfast' not in t and 'Lunch and dinner' in t and 'Porridge' not in t and 'Thu plan: fish' in t, t[:600]
     assert p.locator('#veg_Lunch').count() == 0 and p.locator('[data-a="rel"][data-m="Dinner"]').count() == 0 and p.locator('[data-a="rel"][data-m="Lunch"]').count() > 0  # dinner is the same as lunch; no vegetables (26/11)
-    assert 'Cook' in body(p); p.locator('[data-a="cook"]').first.click(); assert p.locator('[data-a="cook"]:checked + span').inner_text() == 'Mary Test'
+    assert 'Head cook' in body(p); p.locator('[data-a="cook"]').first.click(); assert p.locator('[data-a="cook"]:checked + span').inner_text() == 'Mary Test'
     p.locator('[data-a="rel"][data-m="Lunch"][data-id="chk"]').click()
     tapt(p, 'Next: quantities for today')
     t = body(p); assert 'Quantities for today' in t and 'In bags' in t and 'Add another food' in t and '½' in t, t[:800]
@@ -349,7 +349,7 @@ with sync_playwright() as pw:
     db = json.loads(urllib.request.urlopen(B + '/__dump').read()); bf = [e for e in db['entries'] if e['type'] == 'dbefore' and e['centre'] == 'MIN' and e['date'] == '2026-11-19' and not e.get('del')][0]['data']
     assert bf['pc'] == 175 and bf['pcw'] == 'Five teachers ate' and 'pc' not in bf['q'], bf
     assert 'pp' not in bf, bf
-    t = body(p); assert 'Mealie meal 30 kg' in t and 'Fish 0.5 kg' in t and 'Bread 6 loaves' in t and 'Cook: Mary Test' in t, t[:800]
+    t = body(p); assert 'Mealie meal 30 kg' in t and 'Fish 0.5 kg' in t and 'Bread 6 loaves' in t and 'Head cook: Mary Test' in t, t[:800]
     p.locator('[data-to="after"]').click(); p.wait_for_timeout(100)
     assert 'Leftovers' in body(p)
     # beta 1.7 (Daniela, 26/11): only the portions remained; at Minsundu they feed the dinner of the menu of the week first
@@ -358,9 +358,27 @@ with sync_playwright() as pw:
     p.fill('#q_pr', '50'); p.wait_for_timeout(150); t = p.inner_text('#din'); assert 'Only 50 portions remained for a dinner of 60: 10 missing.' in t, t
     p.fill('#q_pr', '69'); p.locator('[data-a="step"][data-k="pr"][data-s="1"]').click(); assert p.input_value('#q_pr') == '70'
     t = p.inner_text('#din').replace('\n', ' '); assert 'REMAINED AFTER LUNCH 70' in t and 'DINNER (SAPA) 60' in t and 'LEFT FOR ANOTHER DAY 10' in t, t
-    b = p.inner_text('#bal'); assert 'A PORTION' in b and '147 g' in b and '204 portions cooked: 194 portions eaten (124 counted + 60 dinner (sapa) in the plan + 10 for Ukubalula) + 10 portions left. Kitchen staff: not written (Portions).' in b and '9 pieces' in b and '1.47 kg' in b, b   # 30 kg for 204 portions
+    b = p.inner_text('#bal'); assert 'A PORTION' in b and '147 g' in b and '204 portions cooked: 194 portions eaten (124 counted + 60 dinner (sapa) in the menu of the week + 10 for Ukubalula) + 10 portions left. Kitchen staff: not written (Portions).' in b and '9 pieces' in b and '1.47 kg' in b, b   # 30 kg for 204 portions
     shot(p, '07_after'); tapt(p, 'Save'); p.wait_for_timeout(500)
     t = body(p); assert '147 g a portion' in t and 'Kitchen staff' in t and 'To write in Portions' in t and 'Portions remained' in t and 'Left for another day' in t and '10 portions' in t, t[:900]
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read())
+    af = [e for e in db['entries'] if e['type'] == 'dafter' and e['centre'] == 'MIN' and e['date'] == '2026-11-19' and not e.get('del')][0]['data']
+    assert af == {'pr': 70, 'q': {}, 'nc': {}, 'u': {}}, af
+    # beta 1.12 (Letizia, 26/11: "the option to encode each meal quantity in portions: ex: 10 nshima, 6 fish, 30 pork"): the portions remained of each food
+    p.locator('[data-to="after"]').click(); p.wait_for_timeout(150); assert p.locator('#q_pf_fsh').count() == 0 and 'The foods did not remain the same' in body(p)
+    left0 = p.inner_text('#bal')
+    p.locator('[data-a="byFood"]').click(); p.wait_for_timeout(150); t = body(p); assert 'Nshima (portions)' in t and 'Fish (portions)' in t and p.locator('#q_pf_mm').count() == 1 and p.locator('#q_pf_pcs').count() == 0, t[:1500]
+    assert p.inner_text('#bal') == left0   # nothing written for a food: it follows the portions remained
+    p.fill('#q_pf_fsh', '159'); p.locator('[data-a="step"][data-k="pf_fsh"][data-s="1"]').click(); p.wait_for_timeout(150); assert p.input_value('#q_pf_fsh') == '160'
+    b2 = p.inner_text('#bal'); assert b2 != left0 and '0.17 kg' in b2 and '1.47 kg' in b2, b2   # fish: 160 remained, 60 for the dinner, 100 left of 294 portions: 0.5 kg x 100 / 294; the mealie meal does not change
+    tapt(p, 'Save'); p.wait_for_timeout(500); t = body(p); assert 'fish 160' in t, t[:1500]
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read())
+    af = [e for e in db['entries'] if e['type'] == 'dafter' and e['centre'] == 'MIN' and e['date'] == '2026-11-19' and not e.get('del')][0]['data']
+    assert af == {'pr': 70, 'q': {}, 'nc': {}, 'u': {}, 'prf': {'fsh': 160}}, af
+    # opened again: the detail is there; taken off, the day is as before
+    p.locator('[data-to="after"]').click(); p.wait_for_timeout(150); assert p.input_value('#q_pf_fsh') == '160' and p.input_value('#q_pr') == '70'
+    p.locator('[data-a="byFood"]').click(); p.wait_for_timeout(150); assert p.locator('#q_pf_fsh').count() == 0 and p.inner_text('#bal') == left0
+    tapt(p, 'Save'); p.wait_for_timeout(500)
     db = json.loads(urllib.request.urlopen(B + '/__dump').read())
     af = [e for e in db['entries'] if e['type'] == 'dafter' and e['centre'] == 'MIN' and e['date'] == '2026-11-19' and not e.get('del')][0]['data']
     assert af == {'pr': 70, 'q': {}, 'nc': {}, 'u': {}}, af
@@ -459,16 +477,19 @@ with sync_playwright() as pw:
     mn = p.text_content('a.ovc.cyp-c-minsundu'); assert 'Minsundu' in mn and 'To check' in mn and '1 of 4' in mn and 'Not accounted-35' in mn, mn
     assert p.locator('a.ovc.cyp-c-minsundu .dg--done').count() == 1 and p.locator('a.ovc.cyp-c-minsundu .dg--future').count() == 3, p.evaluate("[...document.querySelectorAll('a.ovc.cyp-c-minsundu .dg')].map(x => x.className).join(' ')")
     assert 'days not complete' in t and 'fridge' in t and 'Holy Family' not in p.text_content('a.ovc.cyp-c-luigi'), t[:2000]
+    # beta 1.12 (Mauro, 26/11: "there is always the warning, there's too much alarm"): what is not written is grey and apart; colour only for what the numbers say
+    lu = p.text_content('a.ovc.cyp-c-luigi'); assert 'Nothing written' in lu and 'To check' not in lu and p.locator('a.ovc.cyp-c-luigi .cyp-tag--warn, a.ovc.cyp-c-luigi .cyp-tag--danger').count() == 0, lu
+    assert 'Not written yet' in t and 'Luigi' in p.inner_text('[data-gaps]') and p.locator('[data-gaps] .cyp-tag').count() == 0 and 'Short in the fridge' in t and 'Food missing' not in t, t[:2500]
     assert p.locator('.cyp-appbar__plate img').count() == 1 and p.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     shot(p, '10a_overview')
     # a canteen opens its days, the menu of the week and the fridge
     p.locator('a.ovc[data-id="MIN"]').click(); p.wait_for_timeout(300)
-    t = body(p); assert 'day by day' in t and p.locator('#ovsel').count() == 1 and p.locator('[data-check="MIN"]').count() == 1 and 'Plan of the week' in t, t[-2500:]
+    t = body(p); assert 'day by day' in t and p.locator('#ovsel').count() == 1 and p.locator('[data-check="MIN"]').count() == 1 and 'Plan of the week' not in t, t[-2500:]
     ck = p.inner_text('[data-check="MIN"]'); assert 'Start: no count before this week' in ck and 'End: counted Thu 19 Nov' in ck and 'Expected not known: there is no count before this week.' in ck, ck
     p.evaluate("queue({ kind: 'entry', e: { type: 'endweek', centre: 'MIN', date: '2026-11-15', meal: '', data: { q: { mm: 4, chk: 4 } }, by: '', byName: 'Overview', at: nowIso() } }); render()"); p.wait_for_timeout(900)
     ck = p.inner_text('[data-check="MIN"]'); print('CHECK MIN:', ck.replace('\n', ' | '))
-    assert 'from the count of Sun 15 Nov' in ck and 'Start 4 + delivered 48 − cooked 21.91 = expected 30.09 · counted 24' in ck and '6.09 chickens missing' in ck and 'Daily food counted on 1 of 4 days' in ck and 'shows as missing' in ck, ck
-    t = body(p); assert '6.09 chickens missing in the fridge count of Thu 19 Nov' in t and 'Food missing' in p.text_content('a.ovc.cyp-c-minsundu') and p.locator('.cyp-stat__figure').nth(2).inner_text() == '1', t[:3000]
+    assert 'from the count of Sun 15 Nov' in ck and 'Start 4 + delivered 48 − cooked 21.91 = expected 30.09 · counted 24' in ck and '6.09 chickens short' in ck and '12 kg more' in ck and 'Daily food counted on 1 of 4 days' in ck and 'shows as short' in ck and p.locator('[data-check="MIN"] .cyp-tag--danger').count() == 0, ck
+    t = body(p); mn = p.text_content('a.ovc.cyp-c-minsundu'); assert '6.09 chickens short in the fridge count of Thu 19 Nov' in t and 'Daily food counted on 1 of 4 days: food cooked on the other days is part of it.' in t and 'To check' in mn and '1 food short' in mn and 'Food missing' not in t and p.locator('.cyp-stat__figure').nth(2).inner_text() == '1', t[:3000]
     tapt(p, 'Close Minsundu', exact=False); p.wait_for_timeout(200); assert p.locator('#ovsel').count() == 0
     shot(p, '10_overview')
     with p.expect_download() as dl: tapt(p, 'Export all data in Excel')
@@ -484,6 +505,7 @@ with sync_playwright() as pw:
     assert ck['Chicken pieces'] == 184 and ck['Portions counted during the day'] == 124 and ck['Lunch'] == 'Lunch' and ck['Dinner'] == 'Dinner' and ck['Nshima'] == 'Nshima' and ck['Head cook'] == 'Mary Test' and not any(r['Item'] == 'Chicken pieces' for r in mr), ck
     assert {ck['Protein 1'], ck['Protein 2']} == {'Fish', 'Chicken'}, ck
     pd = [dict(zip([c.value for c in wb['Portions a day'][1]], r)) for r in wb['Portions a day'].iter_rows(min_row=2, values_only=True)]
+    assert 'Portions remained of each food' in pd[0], pd[0]   # beta 1.12: a last column, empty when the foods remained the same
     m19 = [r for r in pd if r['Date'] == '2026-11-19' and r['Centre'] == 'Minsundu'][0]; assert m19['Portions counted'] == 124 and m19['Kitchen staff'] == 6 and m19['Portions cooked'] == 175 and m19['Portions remained'] == 70, m19
     tapt(p, 'Open the delivery notes'); p.wait_for_timeout(100)
     t = body(p); assert 'Chicken 24 chickens · and 2 chickens for Chinika House' in t and 'Chicken 2 chickens · part of the note for Nkwazi Centre' in t, t[:2500]

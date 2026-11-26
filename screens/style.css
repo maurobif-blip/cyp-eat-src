@@ -79,8 +79,9 @@ img.photo.rdimg { max-height: 180px; width: auto; max-width: 100%; display: bloc
 .dgrid { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dg { display: inline-block; width: 22px; height: 22px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--line); font: 600 12px/20px var(--font-text); text-align: center; font-style: normal; color: var(--ink-muted); }
 .dg--done { background: var(--ok); border-color: var(--ok); color: #fff; }
-.dg--part { background: var(--yellow); border-color: var(--yellow); color: var(--navy); }
-.dg--none { background: var(--danger); border-color: var(--danger); color: #fff; }
+/* beta 1.12 (Mauro, 26/11: too much alarm): a day not written is a gap, not a finding: no red, no yellow. Part written: a green frame; nothing written: a grey frame */
+.dg--part { background: transparent; border: 2px solid var(--ok); color: var(--ok); line-height: 18px; }
+.dg--none { background: transparent; border: 2px solid var(--ink-muted); color: var(--ink-muted); line-height: 18px; }
 .dg--absent, .dg--skip { background: var(--ink-muted); border-color: var(--ink-muted); color: #fff; }
 .dg--today { border: 2px solid var(--blue); color: var(--blue); }
 p .dg { width: 12px; height: 12px; vertical-align: -1px; font-size: 0; }

@@ -10,9 +10,9 @@ function dayTitle() { return '<p class="label-caps muted">' + dayName(S.date) + 
 SCREENS.menu = function () {
   var db = view(), f = S.f, relish = db.items.filter(function (it) { return it.relish; }), plan = eatItem(db, EAT_PLAN[eatWeekday(S.date)]);
   var cooks = (db.names || []).filter(function (n) { return n.active && n.role === 'Canteen'; }).map(function (n) { return n.name; }).sort();
-  var cookCard = card(h3('Cook') +
-    (cooks.length ? choice('', cooks.map(function (n) { return { l: esc(n), on: f.cook === n, at: 'data-a="cook" data-n="' + esc(n) + '"' }; }), { aria: 'Cook', name: 'cook', cols: cooks.length > 3 ? 2 : 0 }) : '') +
-    field(cooks.length ? 'Or write the name' : 'Name of the cook', 'ck', '<input id="ck" class="cyp-input" type="text" data-f="cook" value="' + esc(f.cook || '') + '">'));
+  var cookCard = card(h3('Head cook') +
+    (cooks.length ? choice('', cooks.map(function (n) { return { l: esc(n), on: f.cook === n, at: 'data-a="cook" data-n="' + esc(n) + '"' }; }), { aria: 'Head cook', name: 'cook', cols: cooks.length > 3 ? 2 : 0 }) : '') +
+    field(cooks.length ? 'Or write the name' : 'Name of the head cook', 'ck', '<input id="ck" class="cyp-input" type="text" data-f="cook" value="' + esc(f.cook || '') + '">'));
   var both = sameDinner(f.meals);
   return backLink() + title('What do we eat today?') + dayTitle() + skipNote('menu') + cookCard + centreMeals().map(function (m) {
     var x = f.meals[m];

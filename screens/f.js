@@ -13,7 +13,7 @@ SCREENS.today = function () {
   if (sk && sk.data.on && sk.data.absent) return out + banner('danger', 'Nobody of the team was at ' + esc(centreName(c)) + ' on ' + dayName(d) + (sk.byName ? ' (' + esc(sk.byName) + ')' : '') + '. This day has no data: it does not count as zero.') + btn('Undo', 'data-a="skip" data-on="0"', 'block');
   if (sk && sk.data.on) out += banner('danger', 'Food not counted on ' + dayName(d) + '. People are counted.') + btn('Undo', 'data-a="skip" data-on="0"') + list(pStep);
   else out += list(
-    stepRow('1', 'What do we eat today?', noMenu ? 'Menu not written. It can still be added.' : esc(dayMenuText(db, dm)) + (dm.saved ? '' : ' (plan)') + (dm.cook ? ' · Cook: ' + esc(dm.cook) : ''), 'menu', state(dm.saved, noMenu)) +
+    stepRow('1', 'What do we eat today?', noMenu ? 'Menu not written. It can still be added.' : esc(dayMenuText(db, dm)) + (dm.saved ? '' : ' (plan)') + (dm.cook ? ' · Head cook: ' + esc(dm.cook) : ''), 'menu', state(dm.saved, noMenu)) +
     stepRow('2', 'Quantities for today', b ? esc(qtyLine(db, b.data.q, b.data.u)) + (b.data.pc != null ? ' · ' + plural(b.data.pc, 'portion', 'portions') + ' cooked' : '') : (noBefore ? 'Quantities not counted. They can still be added.' : 'Food taken out of the store and the cold room for the meals of today'), 'before', state(b, noBefore)) +
     pStep +
     (left ? stepRow('4', 'Leftovers', a ? 'Saved' : (noAfter ? 'Leftovers not counted. They can still be added.' : 'After the count: what is left at the end of the day'), 'after', state(a, noAfter)) : ''));
@@ -21,7 +21,7 @@ SCREENS.today = function () {
   var u = eatDayUse(db, c, d), rows = [];
   if (u.closed && u.base) db.items.forEach(function (it) { if (u.used[it.id] == null) return; rows.push([esc(it.name), perTxt(it, eatPerPlate(u, it.id)) + (eatBaseOf(u, it.id) !== u.base ? ' (' + plural(eatBaseOf(u, it.id), 'portion', 'portions') + ' with ' + esc(it.name.toLowerCase()) + ')' : '')]); });
   /* beta 1.6: the food left after the last meal, next to the amount a plate */
-  var lrows = []; if (u.remained != null) { lrows.push(['Portions remained', u.remained]); if (u.dinner != null) lrows.push(['Dinner (sapa)', Math.min(u.dinner, u.remained) + (u.dinnerShort ? ' (' + u.dinnerShort + ' missing)' : '')]); lrows.push(['Left for another day', plural(u.leftPortions, 'portion', 'portions')]); }
+  var lrows = []; if (u.remained != null) { lrows.push(['Portions remained', u.remained + (u.remF ? ' (' + db.items.filter(function (it) { return u.remF[it.id] != null; }).map(function (it) { return esc(foodWord(it).toLowerCase()) + ' ' + u.remF[it.id]; }).join(', ') + ')' : '')]); if (u.dinner != null) lrows.push(['Dinner (sapa)', Math.min(u.dinner, u.remained) + (u.dinnerShort ? ' (' + u.dinnerShort + ' missing)' : '')]); lrows.push(['Left for another day', plural(u.leftPortions, 'portion', 'portions')]); }
   if (u.hasAfter) db.items.forEach(function (it) { if (u.left[it.id] == null) return; var lw = leftWords(db, c, d, it, u.left[it.id], it.id === 'chk' ? u.leftPieces : null); if (lw) lrows.push([esc(it.name) + ' left', lw]); });
   /* beta 1.9: the portions cooked against the portions eaten and left */
   if (u.cookedP != null) { var pp9 = planPortions(db, c, d); lrows.unshift(['Portions cooked', u.cookedP + (pp9 && pp9.tot !== u.cookedP ? ' (menu of the week ' + pp9.tot + (u.cookedWhy ? ': ' + esc(u.cookedWhy) : '') + ')' : '')]);

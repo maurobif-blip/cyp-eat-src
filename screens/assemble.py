@@ -212,4 +212,5 @@ sys.path.insert(0, HERE); from b17 import b17; s = b17(s); from b18 import b18, 
 from b20 import b20; s = b20(s)
 from b21 import b21; s = b21(s)
 from b22 import b22; s = b22(s)
+from b23 import b23, b23b; s = b23(s); s = b23b(s)
 open(R + 'index.html', 'w').write(s); print('lines', s.count('\n') + 1)

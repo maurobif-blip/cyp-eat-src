@@ -15,11 +15,32 @@ SCREENS.after = function () {
   return backLink() + title('Leftovers') + dayTitle() + skipNote('after') +
     (din != null ? '<p>Count the portions remained <strong>after lunch</strong>. The dinner (sapa) eats the portions of the menu of the week; what is beyond is left for another day.</p>'
       : '<p>Count the portions remained <strong>after the last meal</strong>: the food cooked and not served.</p>') +
-    card(qRow('pr', 'Portions remained', 'portions', S.f.q.pr, undefined, 1)) +
+    card(qRow('pr', 'Portions remained', 'portions', S.f.q.pr, undefined, 1)) + byFoodCard(db, b) +
     (din != null ? '<div id="din">' + dinnerSplit(din, eatNum(S.f.q.pr)) + '</div>' : '') +
     '<div class="cyp-card" id="bal">' + balanceHtml() + '</div>' +
     btn('Save', 'data-a="saveAfter"', 'primary block') + skipBtn('after');
 };
+/* beta 1.12 (Letizia, 26/11: "the person encoding has to have the option to encode each meal quantity in portions: ex: 10 nshima, 6 fish, 30 pork"):
+   the portions remained of each food, when the foods did not remain the same. A food left empty follows the portions remained */
+function foodWord(it) { return it.id === 'mm' ? 'Nshima' : it.name; }
+function leftFoods(db, b) { return db.items.filter(function (it) { return b.data.q[it.id] != null && !(b.data.nc && b.data.nc[it.id]); }); }
+function byFoodCard(db, b) {
+  var its = leftFoods(db, b); if (its.length < 2) return '';
+  return card(choice('', [{ l: 'The foods did not remain the same: write each food', on: !!S.f.byFood, at: 'data-a="byFood"' }], { many: true, aria: 'Portions remained of each food' }) +
+    (S.f.byFood ? its.map(function (it) { return qRow('pf_' + it.id, foodWord(it), 'portions', S.f.q['pf_' + it.id], undefined, 1).replace('placeholder="0"', 'placeholder="' + (eatNum(S.f.q.pr) == null ? 0 : Math.round(eatNum(S.f.q.pr))) + '"'); }).join('') +
+      small('Example: 10 nshima, 6 fish, 30 pork. A food left empty (in grey) follows the portions remained above.') : ''));
+}
+/* the portions remained of each food as they would be saved, or null */
+function afterPrf() {
+  var db = view(), b = eatGet(db, 'dbefore', S.sess.centre, S.date, ''), out = {}, any = false; if (!S.f.byFood || !b) return null;
+  leftFoods(db, b).forEach(function (it) { var v = eatNum(S.f.q['pf_' + it.id]); if (v != null && v >= 0) { out[it.id] = Math.round(v); any = true; } });
+  return any ? out : null;
+}
+/* the portions remained when only the foods are written: the nshima, or the food with the most */
+function afterPr() {
+  var pr = eatNum(S.f.q.pr), prf = afterPrf(); if (pr != null || !prf) return pr;
+  if (prf.mm != null) return prf.mm; var mx = 0; for (var k in prf) if (prf[k] > mx) mx = prf[k]; return mx;
+}
 /* Minsundu: the dinner of the menu of the week, or null where there is no dinner from the plan */
 function dinnerPlanned(db, c, d) {
   if (fixedMeals().indexOf('Dinner') < 0 || eatDinLeft(db, c)) return null;
@@ -37,10 +58,11 @@ function dinnerSplit(din, pr) {
 /* the balance of the day while the portions are written: the day as it would be saved */
 function balanceHtml() {
   var db = view(), c = S.sess.centre, b = eatGet(db, 'dbefore', c, S.date, ''); if (!b) return '';
-  var pr = eatNum(S.f.q.pr), u;
+  var pr = afterPr(), prf = afterPrf(), u;
   if (pr == null) u = eatDayUse(db, c, S.date);
   else {
     var fake = { type: 'dafter', centre: c, date: S.date, meal: '', key: eatKey('dafter', c, S.date, ''), data: { pr: Math.max(0, Math.round(pr)), q: {}, nc: {}, u: {} } };
+    if (prf) fake.data.prf = prf;
     u = eatDayUse({ rev: db.rev, settings: db.settings, names: db.names, centres: db.centres, items: db.items, entries: db.entries.concat([fake]) }, c, S.date);
   }
   if (u.remained == null) return h3('Balance of the day') + small('Write the portions remained to see the food a portion and the food left.');

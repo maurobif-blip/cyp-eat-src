@@ -55,7 +55,7 @@ function details_(db, e) {
       if (x.veg) p2.push(x.veg);
       parts.push(m + ': ' + p2.join(', '));
     }
-    if (d.cook) parts.push('Cook: ' + d.cook);
+    if (d.cook) parts.push('Head cook: ' + d.cook);
     return parts.join(' | ');
   }
   var q = d.q || {}, nc = d.nc || {};
