@@ -473,6 +473,18 @@ with sync_playwright() as pw:
     shot(p, '10_overview')
     with p.expect_download() as dl: tapt(p, 'Export all data in Excel')
     dl.value.save_as('/tmp/eat_export.xlsx')
+    # beta 1.11 (first review of the export, 26/11): People only Lunch or Dinner, the time only; Menu in columns, head cook, chicken pieces in a column
+    import openpyxl, re
+    wb = openpyxl.load_workbook('/tmp/eat_export.xlsx'); assert wb.sheetnames[:3] == ['People', 'Portions a day', 'Menu'], wb.sheetnames
+    pr = [r for r in wb['People'].iter_rows(min_row=2, values_only=True)]
+    assert set(r[3] for r in pr) <= {'Lunch', 'Dinner'} and all(r[9] in (None, '') or re.fullmatch(r'\d\d:\d\d', str(r[9])) for r in pr), pr[:6]
+    mh = [c.value for c in wb['Menu'][1]]; assert mh[3:9] == ['Lunch', 'Dinner', 'Nshima', 'Protein 1', 'Protein 2', 'Head cook'] and 'Chicken pieces' in mh and 'Portions counted during the day' in mh, mh
+    mr = [dict(zip(mh, r)) for r in wb['Menu'].iter_rows(min_row=2, values_only=True)]
+    ck = [r for r in mr if r['Date'] == '2026-11-19' and r['Centre'] == 'Minsundu' and r['Item'] == 'Chicken'][0]
+    assert ck['Chicken pieces'] == 184 and ck['Portions counted during the day'] == 124 and ck['Lunch'] == 'Lunch' and ck['Dinner'] == 'Dinner' and ck['Nshima'] == 'Nshima' and ck['Head cook'] == 'Mary Test' and not any(r['Item'] == 'Chicken pieces' for r in mr), ck
+    assert {ck['Protein 1'], ck['Protein 2']} == {'Fish', 'Chicken'}, ck
+    pd = [dict(zip([c.value for c in wb['Portions a day'][1]], r)) for r in wb['Portions a day'].iter_rows(min_row=2, values_only=True)]
+    m19 = [r for r in pd if r['Date'] == '2026-11-19' and r['Centre'] == 'Minsundu'][0]; assert m19['Portions counted'] == 124 and m19['Kitchen staff'] == 6 and m19['Portions cooked'] == 175 and m19['Portions remained'] == 70, m19
     tapt(p, 'Open the delivery notes'); p.wait_for_timeout(100)
     t = body(p); assert 'Chicken 24 chickens · and 2 chickens for Chinika House' in t and 'Chicken 2 chickens · part of the note for Nkwazi Centre' in t, t[:2500]
     shot(p, '10b_notes_parts')

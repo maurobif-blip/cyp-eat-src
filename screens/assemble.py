@@ -211,4 +211,5 @@ rep("  E.forEach(function (e) {\n    var c = centreName(e.centre);", "  E.forEac
 sys.path.insert(0, HERE); from b17 import b17; s = b17(s); from b18 import b18, b18b; s = b18(s); s = b18b(s); from b19 import b19; s = b19(s)
 from b20 import b20; s = b20(s)
 from b21 import b21; s = b21(s)
+from b22 import b22; s = b22(s)
 open(R + 'index.html', 'w').write(s); print('lines', s.count('\n') + 1)
