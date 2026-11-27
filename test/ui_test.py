@@ -667,6 +667,36 @@ with sync_playwright() as pw:
     # beta 1.9: the pages of the bar go back to the choice of the day
     p.locator('nav [data-to="week"]').click(); p.wait_for_timeout(150); p.locator('[data-a="histBack"]').click(); p.wait_for_timeout(150); assert 'Which day are you counting?' in body(p)
     p.locator('[data-a="histBack"]').click(); p.wait_for_timeout(150); assert 'Which centre are you counting for?' in body(p)
+    # beta 1.13 (Mauro, 27/11): "Other" next to the proteins (beans today, vegetables for who does not want them); beans also in buckets
+    today(p, 'NKW'); p.locator('.step[data-to="menu"]').click(); p.wait_for_timeout(150)
+    for x in ['chk', 'egg', 'fsh', 'prk', 'sau']:
+        if p.locator('[data-a="rel"][data-m="Lunch"][data-id="%s"]:checked' % x).count(): p.locator('[data-a="rel"][data-m="Lunch"][data-id="%s"]' % x).click()
+    p.locator('[data-a="rel"][data-m="Lunch"][data-id="bea"]').click(); p.locator('[data-a="relo"][data-m="Lunch"]').click(); p.wait_for_timeout(150)
+    assert p.locator('#oth_Lunch').count() == 1 and 'Other: what is it?' in body(p)
+    tapt(p, 'Next: quantities for today'); assert 'Lunch: write what Other is, or untick it.' in body(p)
+    p.fill('#oth_Lunch', 'Vegetables'); shot(p, '32_menu_other'); tapt(p, 'Next: quantities for today'); p.wait_for_timeout(600)
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read()); mn = [e for e in db['entries'] if not e.get('del') and e['type'] == 'dmenu' and e['centre'] == 'NKW' and e['date'] == '2026-11-19'][0]['data']
+    assert mn['meals']['Lunch']['relish'] == ['bea'] and mn['meals']['Lunch']['other'] == 'Vegetables', mn
+    t = body(p); assert 'Quantities for today' in t and p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').count() == 1 and 'In buckets' in t and p.locator('#q_veg').count() == 0, t[:900]
+    p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').click(); p.wait_for_timeout(150)
+    assert p.locator('#ak_bea').count() == 1 and '1 bucket of beans = about how many kg?' in body(p) and 'Beans (buckets)' in body(p), body(p)[:1200]
+    p.fill('#q_mm', '10'); p.fill('#q_bea', '2'); p.locator('[data-a="saveBefore"]').click(); p.wait_for_timeout(150); assert 'Write about how many kg one bucket holds: Beans.' in body(p), body(p)[:600]
+    p.fill('#ak_bea', '7.5'); shot(p, '33_beans_buckets'); p.locator('[data-a="saveBefore"]').click(); p.wait_for_timeout(600)
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read()); bf = [e for e in db['entries'] if not e.get('del') and e['type'] == 'dbefore' and e['centre'] == 'NKW' and e['date'] == '2026-11-19'][0]['data']
+    assert bf['q']['bea'] == 2 and bf['u']['bea'] == 'alt' and bf['ak'] == {'bea': 7.5}, bf
+    # the portions: beans or vegetables, switched while counting
+    if 'Which centre' in body(p) or 'Tap: +1' not in body(p): p.locator('nav [data-to="people"]').click(); p.wait_for_timeout(200)
+    t = body(p); assert 'Protein of the portions you count now' in t and 'Vegetables' in t and 'Beans' in t, t[:900]
+    p.locator('.tap').click(); p.locator('.tap').click(); p.locator('[data-a="prot"][data-id="oth"]').click(); p.wait_for_timeout(100); assert 'Vegetables: +1' in body(p)
+    p.locator('.tap').click(); p.wait_for_timeout(2200)
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read()); pe = [e for e in db['entries'] if not e.get('del') and e['type'] == 'people' and e['centre'] == 'NKW' and e['date'] == '2026-11-19'][0]['data']
+    assert pe['pf'] == {'bea': 2, 'oth': 1}, pe
+    p.locator('nav [data-to="today"]').click(); p.wait_for_timeout(150)
+    t = body(p); assert 'Beans 2 buckets' in t and 'beans, vegetables' in t.lower(), t[:900]
+    # the next day the kg of a bucket is already there
+    p.evaluate("S.date = '2026-11-20'"); p.locator('.step[data-to="before"]').click(); p.wait_for_timeout(150)
+    if p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').count() == 0: p.locator('[data-a="addRow"][data-id="bea"]').click(); p.wait_for_timeout(100)
+    p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').click(); p.wait_for_timeout(100); assert p.input_value('#ak_bea') == '7.5'
     br.close()
 print('errors:', [e for e in errors if 'ERR_INTERNET_DISCONNECTED' not in e])
 print('UI test passed')

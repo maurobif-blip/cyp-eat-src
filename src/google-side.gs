@@ -62,7 +62,7 @@ function details_(db, e) {
   for (id in q) {
     if (id === 'pcs') { parts.push('Chicken pieces ' + (nc.pcs ? 'not counted' : q[id])); continue; }
     it = eatItem(db, id); if (!it) continue;
-    var unit = e.type === 'received' || e.type === 'endweek' || e.type === 'startweek' || e.type === 'note' || (d.u && d.u[id] === 'unit') ? it.unit : it.use;
+    var unit = e.type === 'received' || e.type === 'endweek' || e.type === 'startweek' || e.type === 'note' || (d.u && d.u[id] === 'unit') ? it.unit : (d.u && d.u[id] === 'alt' && EAT_ALT[id] ? EAT_ALT[id].unit + (d.ak && d.ak[id] ? ' (1 = ' + d.ak[id] + ' kg)' : '') : it.use);
     var alt = d.alt && d.alt[id], how = alt ? ' (written: ' + altWords_(it, alt) + ')' : '';
     parts.push(it.name + ' ' + (nc[id] || q[id] == null ? 'not counted' : (d.ab && d.ab[id] ? 'about ' : '') + q[id] + ' ' + unit + how));
   }

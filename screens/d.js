@@ -18,9 +18,9 @@ SCREENS.people = function () {
     (fixedMeals().length ? linkRow('clip', 'Other places cooked for here', 'Chinika, Ukubalula: write them in the plan of the week', 'data-a="planGo"') : '');
   var grp = gs.length ? choice('', [''].concat(gs).map(function (k) { return { l: esc(k || centreName(c)) + ' <b class="num">' + (k ? (S.f.g[k] || 0) : S.f.n) + '</b>', on: (S.f.grp || '') === k, at: 'data-a="grp" data-g="' + esc(k) + '"' }; }), { aria: 'Who eats', name: 'grp' }) : '';
   var pks = dayProteins(), pk = curProtein();
-  var prot = pks.length > 1 ? choice('Protein of the portions you count now', pks.map(function (id) { return { l: esc(eatItem(db, id).name) + ' <b class="num" data-pfn="' + id + '">' + ((S.f.pf || {})[id] || 0) + '</b>', on: id === pk, at: 'data-a="prot" data-id="' + id + '"' }; }), { name: 'prot' }) + small('Out of one protein? Switch here and go on counting: each portion counts for the protein chosen.') : '';
+  var prot = pks.length > 1 ? choice('Protein of the portions you count now', pks.map(function (id) { return { l: esc(protName(db, id)) + ' <b class="num" data-pfn="' + id + '">' + ((S.f.pf || {})[id] || 0) + '</b>', on: id === pk, at: 'data-a="prot" data-id="' + id + '"' }; }), { name: 'prot' }) + small('Out of one protein? Switch here and go on counting: each portion counts for the protein chosen.') : '';
   return dayBar() + mealSeg() + grp + prot +
-    '<div class="tapbox"><button class="tap s-' + st + '" data-a="tap" aria-label="Add one plate' + (S.f.grp ? ' for ' + esc(S.f.grp) : '') + (pk && pks.length > 1 ? ', ' + esc(eatItem(db, pk).name.toLowerCase()) : '') + '"><span class="num big" id="cnt">' + n + '</span><span class="heading-2">' + (S.f.grp ? esc(S.f.grp) + ': +1' : (pk && pks.length > 1 ? esc(eatItem(db, pk).name) + ': +1' : 'Tap: +1')) + '</span></button></div>' +
+    '<div class="tapbox"><button class="tap s-' + st + '" data-a="tap" aria-label="Add one plate' + (S.f.grp ? ' for ' + esc(S.f.grp) : '') + (pk && pks.length > 1 ? ', ' + esc(protName(db, pk).toLowerCase()) : '') + '"><span class="num big" id="cnt">' + n + '</span><span class="heading-2">' + (S.f.grp ? esc(S.f.grp) + ': +1' : (pk && pks.length > 1 ? esc(protName(db, pk)) + ': +1' : 'Tap: +1')) + '</span></button></div>' +
     (countMeals().length < 2 ? '<p class="heading-3 center">' + S.meal + ' · ' + esc(centreName(c)) + '</p>' : '') +
     '<div class="pst" id="pst" aria-live="polite">' + peopleStatus() + '</div>' +
     '<div class="three">' + btn('+5', 'data-a="add" data-n="5"') + btn('+10', 'data-a="add" data-n="10"') + btn('Other', 'data-a="adding"') + '</div>' +
@@ -49,7 +49,13 @@ function staffCard(db, c) {
    in the menu of the day, the person chooses the protein and counts; each change of the count goes to the protein chosen (pf) */
 function dayProteins() {
   var dm = eatDayMenu(view(), S.sess.centre, S.date), x = dm.saved ? dm.meals[S.meal] || dm.meals.Lunch : null;
-  return x && x.relish ? x.relish.filter(function (id) { var it = eatItem(view(), id); return it && it.relish; }) : [];
+  /* beta 1.13: "Other" of the menu of the day counts its portions apart too */
+  return x && x.relish ? x.relish.filter(function (id) { var it = eatItem(view(), id); return it && it.relish; }).concat(x.other ? [EAT_OTHER] : []) : [];
+}
+/* the name of a protein of the day: the food, or what "Other" is */
+function protName(db, id) {
+  if (id !== EAT_OTHER) { var it = eatItem(db, id); return it ? it.name : id; }
+  var dm = eatDayMenu(db, S.sess.centre, S.date), x = dm.meals[S.meal] || dm.meals.Lunch; return x && x.other ? x.other.replace(/^./, function (c) { return c.toUpperCase(); }) : 'Other';
 }
 function curProtein() { var pks = dayProteins(); return pks.length ? (pks.indexOf(S.f.pk) >= 0 ? S.f.pk : pks[0]) : ''; }
 function protAdd(k, id) { var pk = id || curProtein(); if (dayProteins().length < 2 || !pk) return; S.f.pf = S.f.pf || {}; S.f.pf[pk] = Math.max(0, (S.f.pf[pk] || 0) + k); var b = document.querySelector('[data-pfn="' + pk + '"]'); if (b) b.textContent = S.f.pf[pk]; }

@@ -1,7 +1,10 @@
 function unitTog(it, u) {
   if (it.unit === it.use) return '';
   var cur = rowUnit(it, u);
-  return choice('', ['unit', 'use'].map(function (x) { return { l: 'In ' + esc(x === 'unit' ? it.unit : it.use), on: x === cur, at: 'data-a="unit" data-k="' + it.id + '" data-v="' + x + '"' }; }), { aria: 'Unit for ' + it.name, name: 'u_' + it.id });
+  /* beta 1.13 (Mauro, 27/11): beans also in buckets, with the kg in one bucket */
+  var al = EAT_ALT[it.id], opts = ['unit', 'use'].concat(al ? ['alt'] : []);
+  return choice('', opts.map(function (x) { return { l: 'In ' + esc(x === 'unit' ? it.unit : (x === 'alt' ? al.unit : it.use)), on: x === cur, at: 'data-a="unit" data-k="' + it.id + '" data-v="' + x + '"' }; }), { aria: 'Unit for ' + it.name, name: 'u_' + it.id, cols: opts.length > 2 ? 3 : 0 }) +
+    (al && cur === 'alt' ? field('1 ' + al.one + ' of ' + esc(it.name.toLowerCase()) + ' = about how many kg?', 'ak_' + it.id, '<input id="ak_' + it.id + '" class="cyp-input num" type="text" inputmode="decimal" autocomplete="off" data-f="ak_' + it.id + '" value="' + esc(S.f['ak_' + it.id] == null ? '' : String(S.f['ak_' + it.id])) + '">', 'Weigh one ' + al.one + ' once, or ask the cook. The app keeps it for the next days.') : '');
 }
 var BACKNAME = { menu: 'What we eat', before: 'Quantities', after: 'Leftovers', people: 'Portions', today: 'Daily', week: 'Weekly' };
 function backLink() { var to = backTarget(); return BACKNAME[to] && to !== S.scr ? '<button class="cyp-btn start bk" data-a="histBack">' + ic('back') + BACKNAME[to] + '</button>' : backBtn('today', 'Daily'); }
@@ -22,6 +25,8 @@ SCREENS.menu = function () {
       (x.isOther ? field('What is it?', 'bfo', '<input id="bfo" class="cyp-input" type="text" data-mv="Breakfast" data-k="other" value="' + esc(x.other) + '">', 'Bread, tea…') : ''));
     return card(h3(both && m === 'Lunch' ? 'Lunch and dinner' : m) + (plan ? small(WD[eatWeekday(S.date)] + ' plan: ' + esc(plan.name.toLowerCase())) : '') +
       choice('', [{ l: 'Nshima', on: !!x.mm, at: 'data-a="mmm" data-m="' + m + '"' }], { many: true, aria: 'Nshima' }) +
-      choice('Protein', relish.map(function (it) { return { l: esc(it.name), on: x.relish.indexOf(it.id) >= 0, at: 'data-a="rel" data-m="' + m + '" data-id="' + it.id + '"' }; }), { many: true, cols: 2 }));   /* no vegetables (Daniela, 26/11: "vegetables we don't care for now") */
+      choice('Protein', relish.map(function (it) { return { l: esc(it.name), on: x.relish.indexOf(it.id) >= 0, at: 'data-a="rel" data-m="' + m + '" data-id="' + it.id + '"' }; }).concat([{ l: 'Other', on: !!x.isOther, at: 'data-a="relo" data-m="' + m + '"' }]), { many: true, cols: 2 }) +
+      /* beta 1.13 (Mauro, 27/11: "today beans, and who does not want them eats vegetables") */
+      (x.isOther ? field('Other: what is it?', 'oth_' + m, '<input id="oth_' + m + '" class="cyp-input" type="text" data-mv="' + m + '" data-k="other" value="' + esc(x.other || '') + '">', 'For who does not eat the protein of the day. Vegetables, soya…') : ''));   /* no vegetables (Daniela, 26/11: "vegetables we don't care for now") */
   }).join('') + btn('Next: quantities for today', 'data-a="saveMenu"', 'primary block') + skipBtn('menu');
 };

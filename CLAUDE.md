@@ -13,7 +13,7 @@ CYP EAT is the canteen app of the Cicetekelo Youth Project (APJ23, Ndola). This 
 ## Layout
 - `core.js`: the rules (shared database, entries, sums, `eatDayUse`, `eatAccount`...). Runs in the app, in the Google script and in the tests (plain ES5).
 - `src/google-side.gs`: the Google side (sheet mirror, Drive file, photo reader, nightly backup). `Code.gs` = `core.js` without its last line + this file.
-- `src/index.html.draft1`: the old single page; `screens/assemble.py` cuts it and puts in the pieces of `screens/` (one file for each group of screens: `a.js` ... `o.js`, `icons.js`, `style.css`), then applies the replacement passes `b17.py` ... `b23.py`. Output: `src/index.html` (not in git).
+- `src/index.html.draft1`: the old single page; `screens/assemble.py` cuts it and puts in the pieces of `screens/` (one file for each group of screens: `a.js` ... `o.js`, `icons.js`, `style.css`), then applies the replacement passes `b17.py` ... `b24.py`. Output: `src/index.html` (not in git).
 - `build/build.py`: makes `site/` (not in git): page with wordmark and logo inside, `core.js`, `Code.gs`, service worker, icons, fonts and the CYP design system (`build/ds/bundle.css`, `tokens.css`, checked by sha256).
 - `test/`: `core.test.js` (node), `server.js` (fake Google script on port 8765, fake photo reader, `/__now`, `/__dump`, `/__load`), `ui_test.py` (Playwright, clock fixed on Thu 19/11/2026), `look.py` (22 screens at 360 px and the overview at 1280 px).
 

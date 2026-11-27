@@ -1,6 +1,6 @@
 /* CYP EAT: the rules. The same text runs in the Google script (shared database), in the app (to show a change at once)
    and in the tests. Plain ES5 so it runs everywhere. */
-var EAT_VERSION = 'beta 1.12';
+var EAT_VERSION = 'beta 1.13';
 var EAT_MEALS = ['Breakfast', 'Lunch', 'Dinner'];
 /* the meals a centre can have now (20/11: breakfast is left out for now; old breakfast counts are still read) */
 var EAT_MEALS_ON = ['Lunch', 'Dinner'];
@@ -9,6 +9,12 @@ var EAT_ROLES = ['Volunteer', 'Canteen', 'Educator'];
 var EAT_MODES = ['entry', 'delivery', 'admin'];
 /* how the store can count a food: in its own unit (kg, chickens, eggs…) or in a container, with how much one container holds */
 var EAT_PACKS = ['bags', 'trays', 'cans', 'packs', 'pieces'];
+/* beta 1.13 (Mauro, 27/11: "nelle unità di misura dei fagioli va aggiunto anche bucket"): a third unit for the food taken out of the day.
+   How many kg one bucket holds is written with the quantities (data.ak) and kept for the next day at the same centre */
+var EAT_ALT = { bea: { unit: 'buckets', one: 'bucket' } };
+/* beta 1.13 (Mauro, 27/11: "today beans, and who does not want them eats vegetables"): "Other" next to the proteins of the menu of the day,
+   with its name (data.meals[m].other). It has no quantity of its own; its portions are counted apart with the key below */
+var EAT_OTHER = 'oth';
 var EAT_TYPES = ['people', 'menu', 'before', 'after', 'skip', 'received', 'endweek', 'note', 'startweek', 'dmenu', 'dbefore', 'dafter', 'dskip', 'plan', 'staff'];
 /* the food is counted for the whole day: dmenu (all meals at once), dbefore (quantities for today), dafter (left at the end of the day), dskip.
    The old types menu, before, after, skip (one meal) are still read. */
@@ -55,8 +61,9 @@ function eatUpgrade(db) {
   return changed;
 }
 /* a quantity in the unit the person chose ('unit' = store unit, else use unit) -> {use, unit}; null when the size is not set */
-function eatConv(it, q, u) {
+function eatConv(it, q, u, k) {
   if (q == null) return { use: null, unit: null };
+  if (u === 'alt' && EAT_ALT[it.id]) { var au = k > 0 ? Math.round(q * k * 1000) / 1000 : null; return { use: au, unit: au != null && it.per > 0 ? Math.round(au / it.per * 1000) / 1000 : (it.unit === it.use ? au : null) }; }
   if (it.unit === it.use) return { use: q, unit: q };
   if (u === 'unit') return { unit: q, use: it.per ? Math.round(q * it.per * 1000) / 1000 : null };
   return { use: q, unit: it.per ? Math.round(q / it.per * 1000) / 1000 : null };
@@ -189,10 +196,10 @@ function eatPlanCheck(db, centre, date) {
     var cnt = fx != null ? null : (pe && !pe.data.skip ? eatPlates(pe) : null);
     if (pl != null || cnt != null) out.people.push({ meal: m, plan: pl, counted: cnt, fixed: fx != null });
   }
-  var b = eatGet(db, 'dbefore', centre, date, ''), bq = b ? b.data.q || {} : {}, bnc = b ? b.data.nc || {} : {}, bu = b ? b.data.u || {} : {}, seen = {};
+  var b = eatGet(db, 'dbefore', centre, date, ''), bq = b ? b.data.q || {} : {}, bnc = b ? b.data.nc || {} : {}, bu = b ? b.data.u || {} : {}, bak = b ? b.data.ak || {} : {}, seen = {};
   function one(id) {
     if (seen[id] || id === 'pcs') return; seen[id] = 1; var it = eatItem(db, id); if (!it) return;
-    var pq = day.q && day.q[id] != null ? day.q[id] : null, tk = b && bq[id] != null && !bnc[id] ? eatConv(it, bq[id], bu[id]).unit : null;
+    var pq = day.q && day.q[id] != null ? day.q[id] : null, tk = b && bq[id] != null && !bnc[id] ? eatConv(it, bq[id], bu[id], bak[id]).unit : null;
     out.food.push({ id: id, plan: pq, out: tk, before: !!b, diff: pq != null && tk != null ? Math.round((tk - pq) * 1000) / 1000 : null });
   }
   for (var id in (day.q || {})) one(id);
@@ -237,13 +244,13 @@ function eatMealUse(db, centre, date, meal) {
   var b = eatGet(db, 'before', centre, date, meal), a = eatGet(db, 'after', centre, date, meal);
   if (!b) return out;
   out.hasBefore = true; out.hasAfter = !!a;
-  var bq = b.data.q || {}, bnc = b.data.nc || {}, bu = b.data.u || {}, aq = a ? (a.data.q || {}) : {}, anc = a ? (a.data.nc || {}) : {}, au = a ? (a.data.u || {}) : {};
+  var bq = b.data.q || {}, bnc = b.data.nc || {}, bu = b.data.u || {}, bak = b.data.ak || {}, aq = a ? (a.data.q || {}) : {}, anc = a ? (a.data.nc || {}) : {}, au = a ? (a.data.u || {}) : {};
   function r3(x) { return x == null ? null : Math.max(0, Math.round(x * 1000) / 1000); }
   for (var id in bq) {
     if (id === 'pcs') continue;
     var it = eatItem(db, id);
     if (!it || bnc[id] || bq[id] == null || (a && anc[id])) { out.used[id] = null; out.usedU[id] = null; continue; }
-    var tb = eatConv(it, bq[id], bu[id]), ta = eatConv(it, a && aq[id] != null ? aq[id] : 0, au[id] || bu[id]);
+    var tb = eatConv(it, bq[id], bu[id], bak[id]), ta = eatConv(it, a && aq[id] != null ? aq[id] : 0, au[id] || bu[id], bak[id]);
     out.used[id] = tb.use == null || ta.use == null ? null : r3(tb.use - ta.use);
     out.usedU[id] = tb.unit == null || ta.unit == null ? null : r3(tb.unit - ta.unit);
     if (a) { out.left[id] = ta.use == null ? null : r3(ta.use); out.leftU[id] = ta.unit == null ? null : r3(ta.unit); }
@@ -264,7 +271,7 @@ function eatDayMenu(db, centre, date) {
   for (var i = 0; i < meals.length; i++) {
     var m = meals[i], x = e && e.data.meals ? e.data.meals[m] : null;
     if (m === 'Breakfast') out.meals[m] = x ? { mm: !!x.mm, other: x.other || '' } : { mm: true, other: '' };
-    else out.meals[m] = x ? { mm: !!x.mm, relish: (x.relish || []).slice(), veg: x.veg || '' } : { mm: true, relish: [EAT_PLAN[eatWeekday(date)]], veg: '' };
+    else out.meals[m] = x ? { mm: !!x.mm, relish: (x.relish || []).slice(), veg: x.veg || '', other: x.other || '' } : { mm: true, relish: [EAT_PLAN[eatWeekday(date)]], veg: '', other: '' };
   }
   return out;
 }
@@ -309,7 +316,7 @@ function eatDayUse(db, centre, date) {
   if (sk && sk.data.after && left && !a) out.afterSkipped = true;
   out.hasBefore = true; out.hasAfter = !!a; out.closed = !!a || !left;
   if (!left) a = null;
-  var bq = b.data.q || {}, bnc = b.data.nc || {}, bu = b.data.u || {}, aq = a ? (a.data.q || {}) : {}, anc = a ? (a.data.nc || {}) : {}, au = a ? (a.data.u || {}) : {};
+  var bq = b.data.q || {}, bnc = b.data.nc || {}, bu = b.data.u || {}, bak = b.data.ak || {}, aq = a ? (a.data.q || {}) : {}, anc = a ? (a.data.nc || {}) : {}, au = a ? (a.data.u || {}) : {};
   function r3(x) { return x == null ? null : Math.max(0, Math.round(x * 1000) / 1000); }
   /* beta 1.7 (Daniela, 26/11): the leftovers are the portions remained, not the food. All the food taken out made the portions served
      plus the portions remained, so a portion = food taken out / all the portions, and the leftovers = portions left x a portion.
@@ -324,7 +331,7 @@ function eatDayUse(db, centre, date) {
       if (pid === 'pcs') continue;
       var pit = eatItem(db, pid);
       if (!pit || bnc[pid] || bq[pid] == null || !tot) { out.used[pid] = null; out.usedU[pid] = null; continue; }
-      var ptb = eatConv(pit, bq[pid], bu[pid]), sh = out.leftPortions / tot;
+      var ptb = eatConv(pit, bq[pid], bu[pid], bak[pid]), sh = out.leftPortions / tot;
       /* beta 1.12 (Letizia, 26/11): a food with its own portions remained (10 nshima, 6 fish, 30 pork). The dinner eats them first, like the others;
          the food left is its portions left out of all the portions of that food */
       if (prf2 && prf2[pid] != null) {
@@ -345,7 +352,7 @@ function eatDayUse(db, centre, date) {
     if (id === 'pcs') continue;
     var it = eatItem(db, id);
     if (!it || bnc[id] || bq[id] == null || (a && anc[id])) { out.used[id] = null; out.usedU[id] = null; continue; }
-    var tb = eatConv(it, bq[id], bu[id]), ta = eatConv(it, a && aq[id] != null ? aq[id] : 0, au[id] || bu[id]);
+    var tb = eatConv(it, bq[id], bu[id], bak[id]), ta = eatConv(it, a && aq[id] != null ? aq[id] : 0, au[id] || bu[id], bak[id]);
     out.used[id] = tb.use == null || ta.use == null ? null : r3(tb.use - ta.use);
     out.usedU[id] = tb.unit == null || ta.unit == null ? null : r3(tb.unit - ta.unit);
     if (a) { out.left[id] = ta.use == null ? null : r3(ta.use); out.leftU[id] = ta.unit == null ? null : r3(ta.unit); }
@@ -788,14 +795,14 @@ function eatClean(db, type, d) {
     for (var gk in (d.g || {})) { var gn = eatText(gk, 40); if (gn && gi < 4) { pg[gn] = pn(d.g[gk]); gi++; } }
     var pd = gi ? { n: pn(d.n), g: pg } : { n: pn(d.n) }; if (d.done) pd.done = true;
     /* beta 1.11: the portions counted with each protein, when the day has two or more */
-    var pfc = {}, pfa = false; for (var pfi in (d.pf || {})) { var pit = eatItem(db, pfi); if (pit && pit.relish) { pfc[pfi] = pn(d.pf[pfi]); if (pfc[pfi] > 0) pfa = true; } }
+    var pfc = {}, pfa = false; for (var pfi in (d.pf || {})) { var pit = eatItem(db, pfi); if ((pit && pit.relish) || pfi === EAT_OTHER) { pfc[pfi] = pn(d.pf[pfi]); if (pfc[pfi] > 0) pfa = true; } }
     if (pfa && !d.skip) pd.pf = pfc;
     /* skip: the person says the people were not counted for this meal (no number, not finished) */
     if (d.skip) { pd.n = 0; for (var sk0 in (pd.g || {})) pd.g[sk0] = 0; delete pd.done; pd.skip = true; }
     return pd;
   }
   if (type === 'menu') { var r = []; for (var i = 0; i < (d.relish || []).length; i++) { var it = eatItem(db, d.relish[i]); if (it && it.relish && r.indexOf(it.id) < 0) r.push(it.id); } var br = !!d.bread && !!eatItem(db, 'brd'); return { mm: !!d.mm, bread: br, relish: r, veg: eatText(d.veg, 60) }; }
-  function us(u) { var o = {}; if (!u) return o; for (var id in u) { var it = eatItem(db, id); if (it && it.unit !== it.use && (u[id] === 'unit' || u[id] === 'use')) o[id] = u[id]; } return o; }
+  function us(u) { var o = {}; if (!u) return o; for (var id in u) { var it = eatItem(db, id); if (it && (it.unit !== it.use || EAT_ALT[id]) && (u[id] === 'unit' || u[id] === 'use' || (u[id] === 'alt' && EAT_ALT[id]))) o[id] = u[id]; } return o; }
   if (type === 'before' || type === 'after') { var o = { q: qs(d.q), nc: ncs(d.nc), u: us(d.u) }; if (type === 'after') { o.kept = eatNum(d.kept); o.keptNc = !!d.keptNc; } return o; }
   /* on: the food of the whole day not counted (old button). menu, before, after: that step alone is marked as not done,
      and anyone can still fill it in later; a step that is filled in counts, whatever the mark says */
@@ -813,6 +820,9 @@ function eatClean(db, type, d) {
   /* beta 1.9 (Mauro, 26/11): the portions cooked for the day, and why they are not the portions of the menu of the week */
   if (type === 'dbefore') {
     var pco = { q: qs(d.q), nc: ncs(d.nc), u: us(d.u) };
+    /* beta 1.13: the kg in one bucket, for the foods written in buckets */
+    var ako = {}, anyAk = false; for (var akk in (d.ak || {})) { var akn = eatNum(d.ak[akk]); if (EAT_ALT[akk] && pco.u[akk] === 'alt' && akn != null && akn > 0) { ako[akk] = Math.min(100, akn); anyAk = true; } }
+    if (anyAk) pco.ak = ako;
     if (d.pc != null && eatNum(d.pc) != null) { pco.pc = Math.max(0, Math.min(5000, Math.round(eatNum(d.pc)))); var pw = eatText(d.pcw, 300); if (pw) pco.pcw = pw; }
     /* beta 1.10 (Daniela, 26/11: pork today, chicken for who does not eat pork): the portions that had each food, when not everyone had all */
     var ppo = {}, anyPp = false; for (var ppk in (d.pp || {})) { var ppn = eatNum(d.pp[ppk]); if (eatItem(db, ppk) && ppn != null && ppn > 0) { ppo[ppk] = Math.min(5000, Math.round(ppn)); anyPp = true; } }
@@ -826,7 +836,7 @@ function eatClean(db, type, d) {
       var mk = EAT_MEALS[mi], x = src[mk]; if (!x) continue;
       if (mk === 'Breakfast') { ms[mk] = { mm: !!x.mm, other: eatText(x.other, 60) }; continue; }
       var rr = []; for (var ri = 0; ri < (x.relish || []).length; ri++) { var ri2 = eatItem(db, x.relish[ri]); if (ri2 && ri2.relish && rr.indexOf(ri2.id) < 0) rr.push(ri2.id); }
-      ms[mk] = { mm: !!x.mm, relish: rr, veg: eatText(x.veg, 60) };
+      ms[mk] = { mm: !!x.mm, relish: rr, veg: eatText(x.veg, 60) }; var oth = eatText(x.other, 60); if (oth) ms[mk].other = oth;
     }
     return { meals: ms, cook: eatText(d.cook, 60) };
   }
@@ -941,4 +951,4 @@ function eatHandle(req, store) {
   for (i = 0; i < db.comments.length; i++) if (db.comments[i].rev > since && (mode === 'admin')) out.comments.push(db.comments[i]);
   return out;
 }
-if (typeof module !== 'undefined') module.exports = { eatDinLeft: eatDinLeft, eatPortionSize: eatPortionSize, eatPlanRead: eatPlanRead, eatPlanDay: eatPlanDay, eatPlanCheck: eatPlanCheck, eatPlanOthers: eatPlanOthers, eatNewDb: eatNewDb, eatApply: eatApply, eatHandle: eatHandle, eatMealUse: eatMealUse, eatNote: eatNote, eatNotes: eatNotes, eatNoteGaps: eatNoteGaps, eatNoteNo: eatNoteNo, eatUpgrade: eatUpgrade, eatConv: eatConv, eatStock: eatStock, eatWeekCheck: eatWeekCheck, eatFixed: eatFixed, EAT_MEALS_ON: EAT_MEALS_ON, EAT_PACKS: EAT_PACKS, eatPlaceMatch: eatPlaceMatch, eatNoteQ: eatNoteQ, eatNoteHas: eatNoteHas, eatPlates: eatPlates, eatCanteens: eatCanteens, eatPlaces: eatPlaces, eatDayUse: eatDayUse, eatDayMenu: eatDayMenu, eatDayRows: eatDayRows, eatUsesOfDay: eatUsesOfDay, eatNum: eatNum, eatLeft: eatLeft, eatWeekCount: eatWeekCount, eatNoteUntil: eatNoteUntil, eatPerPlate: eatPerPlate, eatBaseOf: eatBaseOf, eatAccount: eatAccount, eatShortBig: eatShortBig, eatUnaccBig: eatUnaccBig, EAT_TOL: EAT_TOL, eatRows: eatRows, eatMenuOf: eatMenuOf, eatGet: eatGet, eatKey: eatKey, eatMonday: eatMonday, eatAddDays: eatAddDays, eatToday: eatToday, eatWeekday: eatWeekday, EAT_VERSION: EAT_VERSION };
+if (typeof module !== 'undefined') module.exports = { EAT_ALT: EAT_ALT, EAT_OTHER: EAT_OTHER, eatDinLeft: eatDinLeft, eatPortionSize: eatPortionSize, eatPlanRead: eatPlanRead, eatPlanDay: eatPlanDay, eatPlanCheck: eatPlanCheck, eatPlanOthers: eatPlanOthers, eatNewDb: eatNewDb, eatApply: eatApply, eatHandle: eatHandle, eatMealUse: eatMealUse, eatNote: eatNote, eatNotes: eatNotes, eatNoteGaps: eatNoteGaps, eatNoteNo: eatNoteNo, eatUpgrade: eatUpgrade, eatConv: eatConv, eatStock: eatStock, eatWeekCheck: eatWeekCheck, eatFixed: eatFixed, EAT_MEALS_ON: EAT_MEALS_ON, EAT_PACKS: EAT_PACKS, eatPlaceMatch: eatPlaceMatch, eatNoteQ: eatNoteQ, eatNoteHas: eatNoteHas, eatPlates: eatPlates, eatCanteens: eatCanteens, eatPlaces: eatPlaces, eatDayUse: eatDayUse, eatDayMenu: eatDayMenu, eatDayRows: eatDayRows, eatUsesOfDay: eatUsesOfDay, eatNum: eatNum, eatLeft: eatLeft, eatWeekCount: eatWeekCount, eatNoteUntil: eatNoteUntil, eatPerPlate: eatPerPlate, eatBaseOf: eatBaseOf, eatAccount: eatAccount, eatShortBig: eatShortBig, eatUnaccBig: eatUnaccBig, EAT_TOL: EAT_TOL, eatRows: eatRows, eatMenuOf: eatMenuOf, eatGet: eatGet, eatKey: eatKey, eatMonday: eatMonday, eatAddDays: eatAddDays, eatToday: eatToday, eatWeekday: eatWeekday, EAT_VERSION: EAT_VERSION };

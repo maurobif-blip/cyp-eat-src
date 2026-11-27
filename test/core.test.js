@@ -645,3 +645,26 @@ assert.ok(r.results[0].again);
   assert.deepEqual([u.leftPortions, u.leftF.mm, u.leftF.prk, u.left.prk, C.eatBaseOf(u, 'prk'), C.eatBaseOf(u, 'mm')], [10, 10, 0, 0, 100 + dinner - 20, 100 + dinner]);
 }
 console.log('core tests: all passed');
+// beta 1.13 (Mauro, 27/11): "Other" next to the proteins of the menu of the day; beans also in buckets
+{
+  db = C.eatNewDb(); now = '2026-11-27T08:00:00Z'; C.eatUpgrade(db); db.centres.find(c => c.id === 'NKW').left = true;
+  assert.ok(ent('dmenu', 'NKW', '2026-11-27', '', { meals: { Lunch: { mm: true, relish: ['bea'], other: '  Vegetables ' } } }).ok);
+  assert.deepEqual(C.eatGet(db, 'dmenu', 'NKW', '2026-11-27', '').data.meals.Lunch, { mm: true, relish: ['bea'], veg: '', other: 'Vegetables' });
+  assert.equal(C.eatDayMenu(db, 'NKW', '2026-11-27').meals.Lunch.other, 'Vegetables');
+  assert.deepEqual(C.eatDayRows(db, 'NKW', '2026-11-27'), ['mm', 'bea']);   // Other has no quantity row
+  // 80 portions with beans, 20 with vegetables: the beans are shared on 80 portions
+  assert.ok(ent('people', 'NKW', '2026-11-27', 'Lunch', { n: 100, done: true, pf: { bea: 80, oth: 20, zzz: 5 } }).ok);
+  assert.deepEqual(C.eatGet(db, 'people', 'NKW', '2026-11-27', 'Lunch').data.pf, { bea: 80, oth: 20 });
+  // beans in buckets: 2 buckets of 7.5 kg = 15 kg; the bags of beans have no weight yet, so no bags
+  assert.deepEqual(C.eatConv(db.items.find(i => i.id === 'bea'), 2, 'alt', 7.5), { use: 15, unit: null });
+  assert.deepEqual(C.eatConv(db.items.find(i => i.id === 'bea'), 2, 'alt', 0), { use: null, unit: null });
+  assert.ok(ent('dbefore', 'NKW', '2026-11-27', '', { q: { mm: 10, bea: 2 }, nc: {}, u: { mm: 'use', bea: 'alt' }, ak: { bea: 7.5, mm: 3 } }).ok);
+  const bd = C.eatGet(db, 'dbefore', 'NKW', '2026-11-27', '').data; assert.deepEqual([bd.u, bd.ak], [{ mm: 'use', bea: 'alt' }, { bea: 7.5 }]);
+  assert.ok(ent('dafter', 'NKW', '2026-11-27', '', { pr: 0 }).ok);
+  const u = C.eatDayUse(db, 'NKW', '2026-11-27');
+  assert.deepEqual([u.used.bea, C.eatBaseOf(u, 'bea'), C.eatPerPlate(u, 'bea'), C.eatBaseOf(u, 'mm')], [15, 80, 0.1875, 100]);
+  // "alt" is refused for a food without a third unit
+  assert.ok(ent('dbefore', 'NKW', '2026-11-27', '', { q: { mm: 10 }, nc: {}, u: { mm: 'alt' } }).ok);
+  assert.deepEqual(C.eatGet(db, 'dbefore', 'NKW', '2026-11-27', '').data.u, {});
+}
+console.log('core tests 1.13: all passed');
