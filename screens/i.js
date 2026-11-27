@@ -23,7 +23,24 @@ SCREENS.after = function () {
 /* beta 1.12 (Letizia, 26/11: "the person encoding has to have the option to encode each meal quantity in portions: ex: 10 nshima, 6 fish, 30 pork"):
    the portions remained of each food, when the foods did not remain the same. A food left empty follows the portions remained */
 function foodWord(it) { return it.id === 'mm' ? 'Nshima' : it.name; }
-function leftFoods(db, b) { return db.items.filter(function (it) { return b.data.q[it.id] != null && !(b.data.nc && b.data.nc[it.id]); }); }
+/* the portions remained of each food, in words: nshima 10, fish 6, vegetables 3 */
+function remFText(db, u) {
+  if (!u.remF) return '';
+  var dm = eatDayMenu(db, S.sess ? S.sess.centre : '', S.date), oth = (dm.meals.Lunch && dm.meals.Lunch.other) || (dm.meals.Dinner && dm.meals.Dinner.other) || 'other';
+  return db.items.filter(function (it) { return u.remF[it.id] != null; }).map(function (it) { return esc(foodWord(it).toLowerCase()) + ' ' + u.remF[it.id]; })
+    .concat(u.remF[EAT_OTHER] != null ? [esc(oth.toLowerCase()) + ' ' + u.remF[EAT_OTHER]] : []).join(', ');
+}
+/* beta 1.14 (Mauro, 27/11: at Luigi the quantities were "Not counted" and the option was not there): the foods of the menu of the day
+   (nshima, proteins, Other) and the foods written in the quantities. The portions remained are counted even without the quantities */
+function leftFoods(db, b) {
+  var ids = [], dm = eatDayMenu(db, S.sess.centre, S.date), oth = '';
+  function add(id) { var it = eatItem(db, id); if (it && it.stock !== false && ids.indexOf(id) < 0) ids.push(id); }
+  ['Breakfast', 'Lunch', 'Dinner'].forEach(function (m) { var x = dm.meals[m]; if (!x || m === 'Breakfast') return; if (x.mm) add('mm'); (x.relish || []).forEach(add); if (x.other && !oth) oth = x.other; });
+  for (var k in (b.data.q || {})) if (k !== 'pcs' && b.data.q[k] != null && !(b.data.nc && b.data.nc[k])) add(k);
+  var its = db.items.filter(function (it) { return ids.indexOf(it.id) >= 0; });
+  if (oth) its.push({ id: EAT_OTHER, name: oth.replace(/^./, function (ch) { return ch.toUpperCase(); }) });
+  return its;
+}
 function byFoodCard(db, b) {
   var its = leftFoods(db, b); if (its.length < 2) return '';
   return card(choice('', [{ l: 'The foods did not remain the same: write each food', on: !!S.f.byFood, at: 'data-a="byFood"' }], { many: true, aria: 'Portions remained of each food' }) +

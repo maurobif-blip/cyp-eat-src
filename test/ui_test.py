@@ -697,6 +697,21 @@ with sync_playwright() as pw:
     p.evaluate("S.date = '2026-11-20'"); p.locator('.step[data-to="before"]').click(); p.wait_for_timeout(150)
     if p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').count() == 0: p.locator('[data-a="addRow"][data-id="bea"]').click(); p.wait_for_timeout(100)
     p.locator('[data-a="unit"][data-k="bea"][data-v="alt"]').click(); p.wait_for_timeout(100); assert p.input_value('#ak_bea') == '7.5'
+    # beta 1.14 (Mauro, 27/11): at Luigi the quantities were "Not counted" and the leftovers of each food could not be written
+    p.evaluate("S.date = '2026-11-19'"); p.locator('nav [data-to="today"]').click(); p.wait_for_timeout(150)
+    p.locator('.step[data-to="before"]').click(); p.wait_for_timeout(200)
+    for k in ['mm', 'bea']: p.locator('[data-a="nc"][data-k="%s"]' % k).click(); p.wait_for_timeout(80)
+    p.locator('[data-a="saveBefore"]').click(); p.wait_for_timeout(600)
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read()); bf = [e for e in db['entries'] if not e.get('del') and e['type'] == 'dbefore' and e['centre'] == 'NKW' and e['date'] == '2026-11-19'][0]['data']
+    assert bf['nc'] == {'mm': True, 'bea': True}, bf
+    p.evaluate("go('after')"); p.wait_for_timeout(200)   # the step shows after the portions are finished; the screen is the same
+    assert 'The foods did not remain the same' in body(p), body(p)[:900]
+    p.locator('[data-a="byFood"]').click(); p.wait_for_timeout(150)
+    assert [p.locator('#q_pf_%s' % k).count() for k in ['mm', 'bea', 'oth']] == [1, 1, 1] and 'Vegetables (portions)' in body(p), body(p)[:1500]
+    p.fill('#q_pf_mm', '0'); p.fill('#q_pf_bea', '6'); p.fill('#q_pf_oth', '2'); shot(p, '34_leftovers_no_quantities'); tapt(p, 'Save'); p.wait_for_timeout(600)
+    db = json.loads(urllib.request.urlopen(B + '/__dump').read()); af = [e for e in db['entries'] if not e.get('del') and e['type'] == 'dafter' and e['centre'] == 'NKW' and e['date'] == '2026-11-19'][0]['data']
+    assert af['pr'] == 0 and af['prf'] == {'mm': 0, 'bea': 6, 'oth': 2}, af
+    assert p.evaluate("remFText(view(), { remF: eatGet(view(), 'dafter', 'NKW', '2026-11-19', '').data.prf })") == 'nshima 0, beans 6, vegetables 2'   # the words of Daily and of the Excel
     br.close()
 print('errors:', [e for e in errors if 'ERR_INTERNET_DISCONNECTED' not in e])
 print('UI test passed')

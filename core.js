@@ -1,6 +1,6 @@
 /* CYP EAT: the rules. The same text runs in the Google script (shared database), in the app (to show a change at once)
    and in the tests. Plain ES5 so it runs everywhere. */
-var EAT_VERSION = 'beta 1.13';
+var EAT_VERSION = 'beta 1.14';
 var EAT_MEALS = ['Breakfast', 'Lunch', 'Dinner'];
 /* the meals a centre can have now (20/11: breakfast is left out for now; old breakfast counts are still read) */
 var EAT_MEALS_ON = ['Lunch', 'Dinner'];
@@ -346,6 +346,9 @@ function eatDayUse(db, centre, date) {
       out.used[pid] = ptb.use == null ? null : r3(ptb.use * (1 - sh)); out.usedU[pid] = ptb.unit == null ? null : r3(ptb.unit * (1 - sh));
     }
     if (bq.pcs != null && !bnc.pcs && tot) { out.leftPieces = Math.round(bq.pcs * (shChk != null ? shChk : out.leftPortions / tot) * 10) / 10; out.pieces = bq.pcs - out.leftPieces; }
+    /* beta 1.14 (Mauro, 27/11: the option was missing at Luigi, quantities not counted): the portions remained of each food are kept
+       also for a food without quantities of the day (and for "Other"); only the food left of it cannot be worked out */
+    for (var rk in (prf2 || {})) if (!out.remF || out.remF[rk] == null) { out.remF = out.remF || {}; out.leftF = out.leftF || {}; out.remF[rk] = prf2[rk]; out.leftF[rk] = prf2[rk] - Math.min(din, prf2[rk]); }
     return out;
   }
   for (var id in bq) {
@@ -812,7 +815,7 @@ function eatClean(db, type, d) {
   if (type === 'dafter' && d.pr != null) {
     var pro = { pr: Math.max(0, Math.min(5000, Math.round(Number(d.pr) || 0))), q: {}, nc: {}, u: {} };
     /* beta 1.12 (Letizia, 26/11: "the option to encode each meal quantity in portions: ex: 10 nshima, 6 fish, 30 pork"): the portions remained of each food, when they are not the same */
-    var prf = {}, anyPrf = false; for (var prk in (d.prf || {})) { var prn = eatNum(d.prf[prk]); if (eatItem(db, prk) && prn != null && prn >= 0) { prf[prk] = Math.min(5000, Math.round(prn)); anyPrf = true; } }
+    var prf = {}, anyPrf = false; for (var prk in (d.prf || {})) { var prn = eatNum(d.prf[prk]); if ((eatItem(db, prk) || prk === EAT_OTHER) && prn != null && prn >= 0) { prf[prk] = Math.min(5000, Math.round(prn)); anyPrf = true; } }
     if (anyPrf) pro.prf = prf;
     return pro;
   }

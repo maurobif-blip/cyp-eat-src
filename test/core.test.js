@@ -668,3 +668,15 @@ console.log('core tests: all passed');
   assert.deepEqual(C.eatGet(db, 'dbefore', 'NKW', '2026-11-27', '').data.u, {});
 }
 console.log('core tests 1.13: all passed');
+// beta 1.14 (Mauro, 27/11): the portions remained of each food also without the quantities of the day (Luigi, quantities "Not counted"), and for Other
+{
+  db = C.eatNewDb(); now = '2026-11-27T10:00:00Z'; C.eatUpgrade(db); db.centres.find(c => c.id === 'NKW').left = true;
+  assert.ok(ent('dmenu', 'NKW', '2026-11-27', '', { meals: { Lunch: { mm: true, relish: ['bea'], other: 'Vegetables' } } }).ok);
+  assert.ok(ent('people', 'NKW', '2026-11-27', 'Lunch', { n: 70, done: true }).ok);
+  assert.ok(ent('dbefore', 'NKW', '2026-11-27', '', { q: { mm: null, bea: null }, nc: { mm: true, bea: true }, u: {} }).ok);
+  assert.ok(ent('dafter', 'NKW', '2026-11-27', '', { pr: 0, prf: { mm: 0, bea: 6, oth: 2 } }).ok);
+  assert.deepEqual(C.eatGet(db, 'dafter', 'NKW', '2026-11-27', '').data.prf, { mm: 0, bea: 6, oth: 2 });
+  const u = C.eatDayUse(db, 'NKW', '2026-11-27');
+  assert.deepEqual([u.remained, u.remF, u.leftF, u.left.bea == null], [0, { mm: 0, bea: 6, oth: 2 }, { mm: 0, bea: 6, oth: 2 }, true]);
+}
+console.log('core tests 1.14: all passed');

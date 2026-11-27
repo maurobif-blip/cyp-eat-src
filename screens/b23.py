@@ -19,7 +19,7 @@ def b23(s):
     rep("A.saveAfter = function () {", "A.byFood = function () { S.f.byFood = !S.f.byFood; S.keepScroll = true; render(); };\nA.saveAfter = function () {")
     # the Excel, tab Portions a day (b22): the portions remained of each food in a last column
     rep("'Left for another day', 'Not accounted (cooked - eaten - left)'], rows: [] }, pseen = {};", "'Left for another day', 'Not accounted (cooked - eaten - left)', 'Portions remained of each food'], rows: [] }, pseen = {};")
-    rep("u.leftPortions == null ? '' : u.leftPortions, na]);", "u.leftPortions == null ? '' : u.leftPortions, na, u.remF ? db.items.filter(function (it) { return u.remF[it.id] != null; }).map(function (it) { return it.name + ' ' + u.remF[it.id]; }).join(', ') : '']);")
+    rep("u.leftPortions == null ? '' : u.leftPortions, na]);", "u.leftPortions == null ? '' : u.leftPortions, na, u.remF ? db.items.filter(function (it) { return u.remF[it.id] != null; }).map(function (it) { return it.name + ' ' + u.remF[it.id]; }).concat(u.remF[EAT_OTHER] != null ? [((eatDayMenu(db, e.centre, e.date).meals.Lunch || {}).other || 'Other') + ' ' + u.remF[EAT_OTHER]] : []).join(', ') : '']);")
     return s
 
 # Daniela, 26/11: "Instead of plan of the week 'Menu of the week'". The Weekly page said it since beta 1.7; now every text of the app does.
